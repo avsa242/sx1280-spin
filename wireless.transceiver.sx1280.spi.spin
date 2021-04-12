@@ -82,6 +82,11 @@ PUB Reset
     outa[_RESET] := 1
     time.msleep(20)
 
+PUB RXMode{} | tmp
+' Change chip state to receive
+    tmp := 00_00_00                             ' no timeout - stay in RX until
+    cmd(core#SET_RX, @tmp, 3, 0, 0)             ' packet is received
+
 PUB RXPayload(nr_bytes, ptr_buff)
 ' Receive data from FIFO
 '   Valid values:
