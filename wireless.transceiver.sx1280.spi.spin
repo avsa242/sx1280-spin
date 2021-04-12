@@ -67,6 +67,11 @@ PUB Carrierfreq(freq)
         other:
             return
 
+PUB Idle{} | tmp
+' Change transceiver to idle state
+    tmp := 0                                    ' [b0]: Run on RC OSC (13MHz)
+    cmd(core#SET_STDBY, @tmp, 1, 0, 0)
+
 PUB Reset
 ' Reset device
     outa[_RESET] := 1
@@ -92,9 +97,10 @@ PUB RXPayload(nr_bytes, ptr_buff)
         other:
             return
 
-PUB Sleep{}
+PUB Sleep{} | tmp
 ' Power down chip
-    cmd(core#SET_SLEEP, 0, 0, 0, 0)
+    tmp := 0                                    '[b1..0]: RAM flushed in sleep
+    cmd(core#SET_SLEEP, @tmp, 1, 0, 0)
 
 PUB StatusReg{}: stat
 ' Read status register
