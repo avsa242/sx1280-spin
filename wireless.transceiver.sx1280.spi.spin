@@ -107,9 +107,15 @@ PUB StatusReg{}: stat
     cmd(core#GET_STATUS, 0, 0, 0, 0)
     return _status
 
-PUB TESTCW
-' Enable continuous carrier transmit (intended for testing only)
+PUB TESTCW{}
+' Enable continuous carrier transmit
+'   (intended for testing only)
     cmd(core#SET_TXCW, 0, 0, 0, 0)
+
+PUB TESTFS{}
+' Enable frequency synthesizer mode - lock PLL to carrier freq
+'   (intended for testing only)
+    cmd(core#SET_FS, 0, 0, 0, 0)
 
 PUB TXPayload(nr_bytes, ptr_buff)
 ' Transmit data queued in FIFO
