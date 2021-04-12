@@ -117,6 +117,11 @@ PUB TESTFS{}
 '   (intended for testing only)
     cmd(core#SET_FS, 0, 0, 0, 0)
 
+PUB TXMode{} | tmp
+' Change chip state to transmit
+    tmp := 00_00_00                             ' no timeout, stay in TX until
+    cmd(core#SET_TX, @tmp, 3, 0, 0)             ' packet is transmitted
+
 PUB TXPayload(nr_bytes, ptr_buff)
 ' Transmit data queued in FIFO
 '   Valid values:
