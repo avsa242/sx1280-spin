@@ -92,6 +92,10 @@ PUB RXPayload(nr_bytes, ptr_buff)
         other:
             return
 
+PUB Sleep{}
+' Power down chip
+    cmd(core#SET_SLEEP, 0, 0, 0, 0)
+
 PUB StatusReg{}: stat
 ' Read status register
     cmd(core#GET_STATUS, 0, 0, 0, 0)
