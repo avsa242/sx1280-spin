@@ -107,16 +107,9 @@ PUB StatusReg{}: stat
     cmd(core#GET_STATUS, 0, 0, 0, 0)
     return _status
 
-PUB TESTCW(state)
+PUB TESTCW
 ' Enable continuous carrier transmit (intended for testing only)
-'   Valid values: *FALSE: Disable, TRUE (-1 or 1): Enable.
-'   Any other value is ignored
-    case ||(state)
-        0, 1:
-            state := lookupz(||(state): core#SET_STDBY, core#SET_TXCW)
-            cmd(state, 0, 0, 0, 0)
-        other:
-            return
+    cmd(core#SET_TXCW, 0, 0, 0, 0)
 
 PUB TXPayload(nr_bytes, ptr_buff)
 ' Transmit data queued in FIFO
