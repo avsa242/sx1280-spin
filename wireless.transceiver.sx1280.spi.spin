@@ -77,6 +77,21 @@ PUB Reset
     outa[_RESET] := 1
     time.msleep(20)
 
+PUB RXPayload(nr_bytes, ptr_buff)
+' Receive data from FIFO
+'   Valid values:
+'       nr_bytes: 1..255
+    case nr_bytes
+        1..255:
+            repeat until not busy{}
+            outa[_CS] := 0
+            spi.wr_byte(core#RD_BUFF)
+            spi.wr_byte(0)                      ' offset within RX FIFO
+            spi.rdblock_lsbf(ptr_buff, nr_bytes)
+            outa[_CS] := 1
+        other:
+            return
+
 PUB StatusReg{}: stat
 ' Read status register
     cmd(core#GET_STATUS, 0, 0, 0, 0)
