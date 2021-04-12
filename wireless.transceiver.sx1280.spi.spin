@@ -18,6 +18,13 @@ CON
     ' scale up to preserve precision, then round up as an int
     F_RES       = round((float(OSC) / float(TWO_18)) * 1000.0)
 
+' Modulation modes
+    GFSK        = 0
+    LORA        = 1
+    RANGING     = 2
+    FLRC        = 3
+    BLE         = 4
+
 VAR
 
     long _CS, _RESET, _BUSY
@@ -71,6 +78,24 @@ PUB Idle{} | tmp
 ' Change transceiver to idle state
     tmp := 0                                    ' [b0]: Run on RC OSC (13MHz)
     cmd(core#SET_STDBY, @tmp, 1, 0, 0)
+
+PUB Modulation(mode)
+' Set OTA modulation
+'   Valid values:
+'       GFSK (0)
+'       LORA (1)
+'       RANGING (2)
+'       FLRC (3)
+'       BLE (4)
+'   NOTE: This setting must be configured before any others, as no
+'   existing settings are preserved when this setting is changed, and
+'   some settings have a modulation-specific meaning
+    case mode
+        GFSK, LORA, RANGING, FLRC, BLE:
+            idle{}                              ' must be set in idle/standby
+            cmd(core#SET_PKTTYPE, @mode, 1, 0, 0)
+        other:
+            return
 
 PUB Reset
 ' Reset device
