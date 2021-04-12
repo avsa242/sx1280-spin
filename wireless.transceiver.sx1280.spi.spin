@@ -63,7 +63,7 @@ PUB Carrierfreq(freq)
     case freq
         2_400_000..2_500_000:
             freq := u64.multdiv(freq, 1_000_000, F_RES) 
-            cmd(core#SETRFFREQ, @freq, 3, 0, 0)
+            cmd(core#SET_RFFREQ, @freq, 3, 0, 0)
         other:
             return
 
@@ -79,7 +79,7 @@ PUB Reset
 
 PUB StatusReg{}: stat
 ' Read status register
-    cmd(core#GETSTATUS, 0, 0, 0, 0)
+    cmd(core#GET_STATUS, 0, 0, 0, 0)
     return _status
 
 PUB TESTCW(state)
@@ -88,7 +88,7 @@ PUB TESTCW(state)
 '   Any other value is ignored
     case ||(state)
         0, 1:
-            state := lookupz(||(state): core#SETSTANDBY, core#SETTXCW)
+            state := lookupz(||(state): core#SET_STDBY, core#SET_TXCW)
             cmd(state, 0, 0, 0, 0)
         other:
             return
@@ -101,7 +101,7 @@ PUB TXPower(pwr)
         -18..13:
             pwr += 18
             pwr.byte[1] := $e0  'xxx hardcoded (ramp time, us)
-            cmd(core#SETTXPARAMS, @pwr, 2, 0, 0)
+            cmd(core#SET_TXPARAMS, @pwr, 2, 0, 0)
         other:
             return
 
@@ -109,7 +109,7 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp)
 ' Send command to device
     repeat until not busy
     case cmd_val
-        core#GETSTATUS:
+        core#GET_STATUS:
             outa[_CS] := 0
             spi.wr_byte(cmd_val)
             _status := spi.rd_byte{}

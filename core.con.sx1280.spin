@@ -18,47 +18,47 @@ CON
 
 ' Commands
     NOOP                        = $00
-    GETPACKETTYPE               = $03
+    GETPKTTYPE                  = $03
 
-    GETIRQSTATUS                = $15
-    GETRXBUFFERSTATUS           = $17
+    GET_IRQSTATUS               = $15
+    GET_RXBUFFSTATUS            = $17
     WRITEREG                    = $18
     READREG                     = $19
-    WRITEBUFFER                 = $1A
-    READBUFFER                  = $1B
-    GETPACKETSTATUS             = $1D
-    GETRSSIINST                 = $1F
+    WR_BUFF                     = $1A
+    RD_BUFF                     = $1B
+    GET_PKTSTATUS               = $1D
+    GET_RSSIINST                = $1F
 
-    SETSTANDBY                  = $80
-    SETRX                       = $82
-    SETTX                       = $83
-    SETSLEEP                    = $84
-    SETRFFREQ                   = $86
-    SETCADPARAMS                = $88
-    SETPACKETTYPE               = $8A
-    SETMODULATIONPARAMS         = $8B
-    SETPACKETPARAMS             = $8C
-    SETDIOIRQPARAMS             = $8D
-    SETTXPARAMS                 = $8E
-    SETBUFFERBASEADDRESS        = $8F
+    SET_STDBY                   = $80
+    SET_RX                      = $82
+    SET_TX                      = $83
+    SET_SLEEP                   = $84
+    SET_RFFREQ                  = $86
+    SET_CADPARAMS               = $88
+    SET_PKTTYPE                 = $8A
+    SET_MODPARAMS               = $8B
+    SET_PKTPARAMS               = $8C
+    SET_DIOIRQPARAMS            = $8D
+    SET_TXPARAMS                = $8E
+    SET_BUFF_BASEADDR           = $8F
 
-    SETRXDUTYCYCLE              = $94
-    SETREGULATORMODE            = $96
-    CLRIRQSTATUS                = $97
-    SETLONGPREAMBLE             = $9B
-    SETPERFCOUNTERMODE          = $9C
-    SETUARTSPEED                = $9D
-    SETAUTOFS                   = $9E
+    SET_RXDUTYCYCLE             = $94
+    SET_REGULATORMODE           = $96
+    CLR_IRQSTATUS               = $97
+    SET_LONGPREAMBLE            = $9B
+    SET_PERFCTRMODE             = $9C
+    SET_UARTSPEED               = $9D
+    SET_AUTOFS                  = $9E
 
-    SETRANGINGROLE              = $A3
+    SET_RANGINGROLE             = $A3
 
-    GETSTATUS                   = $C0
-    SETFS                       = $C1
-    SETCAD                      = $C5
+    GET_STATUS                  = $C0
+    SET_FS                      = $C1
+    SET_CAD                     = $C5
 
-    SETTXCW                     = $D1
-    SETTXCONT_PREAMBLE          = $D2
-    SETSAVECONTEXT              = $D5
+    SET_TXCW                    = $D1
+    SET_TXCONT_PREAMBLE         = $D2
+    SET_SAVECONTEXT             = $D5
 
 ' Symbols
     GFSK_BLE_BR_2_000_BW_2_4    = $04
@@ -96,14 +96,14 @@ CON
     BT_1_0                      = $10
     BT_0_5                      = $20
 
-    PREAMBLE_LENGTH_04_BITS     = $00
-    PREAMBLE_LENGTH_08_BITS     = $10
-    PREAMBLE_LENGTH_12_BITS     = $20
-    PREAMBLE_LENGTH_16_BITS     = $30
-    PREAMBLE_LENGTH_20_BITS     = $40
-    PREAMBLE_LENGTH_24_BITS     = $50
-    PREAMBLE_LENGTH_28_BITS     = $60
-    PREAMBLE_LENGTH_32_BITS     = $70
+    PREAMBLE_LEN_04_BITS        = $00
+    PREAMBLE_LEN_08_BITS        = $10
+    PREAMBLE_LEN_12_BITS        = $20
+    PREAMBLE_LEN_16_BITS        = $30
+    PREAMBLE_LEN_20_BITS        = $40
+    PREAMBLE_LEN_24_BITS        = $50
+    PREAMBLE_LEN_28_BITS        = $60
+    PREAMBLE_LEN_32_BITS        = $70
 
     SYNC_WORD_LEN_1_B           = $00
     SYNC_WORD_LEN_2_B           = $02
@@ -111,40 +111,40 @@ CON
     SYNC_WORD_LEN_4_B           = $06
     SYNC_WORD_LEN_5_B           = $08
 
-    RADIO_RX_MATCH_SYNCWORD_OFF = $00
-    RADIO_RX_MATCH_SYNCWORD_1   = $00
-    RADIO_RX_MATCH_SYNCWORD_2   = $00
-    RADIO_RX_MATCH_SYNCWORD_1_2 = $00
-    RADIO_RX_MATCH_SYNCWORD_3   = $00
-    RADIO_RX_MATCH_SYNCWORD_1_3 = $00
-    RADIO_RX_MATCH_SYNCWORD_2_3 = $00
-    RADIO_RX_MATCH_SYNCWORD_1_2_3   = $00
+    RX_MATCH_SYNCWD_OFF         = $00
+    RX_MATCH_SYNCWD_1           = $00
+    RX_MATCH_SYNCWD_2           = $00
+    RX_MATCH_SYNCWD_1_2         = $00
+    RX_MATCH_SYNCWD_3           = $00
+    RX_MATCH_SYNCWD_1_3         = $00
+    RX_MATCH_SYNCWD_2_3         = $00
+    RX_MATCH_SYNCWD_1_2_3       = $00
 
-    RADIO_PACKET_FIXED_LENGTH   = $00
-    RADIO_PACKET_VARIABLE_LENGTH    = $20
+    PKT_FIXED_LEN               = $00
+    PKT_VAR_LEN                 = $20
 
-    RADIO_CRC_OFF                   = $00
-    RADIO_CRC_1_BYTES               = $10
-    RADIO_CRC_2_BYTES               = $20
+    CRC_OFF                     = $00
+    CRC_1_BYTES                 = $10
+    CRC_2_BYTES                 = $20
 
-    WHITENING_ENABLE                = $00
-    WHITENING_DISABLE               = $08
+    WHITE_ENA                   = $00
+    WHITE_DIS                   = $08
 
 ' Registers
-    FIRMWARE_MSB                    = $0153
-    SYNCWORD1                       = $09CE 'MSB .. $09D2 (LSB)
-    SYNCWORD2                       = $09D3 'MSB .. $09D7 (LSB)
-    SYNCWORD3                       = $09D8 'MSB .. $09DC (LSB)
+    FIRMWARE_MSB                = $0153
+    SYNCWD1                     = $09CE 'MSB .. $09D2 (LSB)
+    SYNCWD2                     = $09D3 'MSB .. $09D7 (LSB)
+    SYNCWD3                     = $09D8 'MSB .. $09DC (LSB)
 
-    CRCPOLYNOMIAL_MSB               = $9C6
-    CRCPOLYNOMIAL_LSB               = $9C7
-    CRCINIT_MSB                     = $9C8
-    CRCINIT_LSB                     = $9C9
+    CRCPOLY_MSB                 = $9C6
+    CRCPOLY_LSB                 = $9C7
+    CRCINIT_MSB                 = $9C8
+    CRCINIT_LSB                 = $9C9
 
 ' BLE 4.2
-    BLE_4_2_BR_1_000_BW_1_2             = $45
-    BLE_4_2_MOD_IND_0_5                 = $01
-    BLE_4_2_BT_0_5                      = $20
+    BLE_4_2_BR_1_000_BW_1_2     = $45
+    BLE_4_2_MOD_IND_0_5         = $01
+    BLE_4_2_BT_0_5              = $20
 
 PUB Null
 ' This is not a top-level object
