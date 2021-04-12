@@ -108,6 +108,21 @@ PUB TESTCW(state)
         other:
             return
 
+PUB TXPayload(nr_bytes, ptr_buff)
+' Transmit data queued in FIFO
+'   Valid values:
+'       nr_bytes: 1..255
+    case nr_bytes
+        1..255:
+            repeat until not busy{}
+            outa[_CS] := 0
+            spi.wr_byte(core#WR_BUFF)
+            spi.wr_byte(0)                      ' offset within TX FIFO
+            spi.wrblock_lsbf(ptr_buff, nr_bytes)
+            outa[_CS] := 1
+        other:
+            return
+
 PUB TXPower(pwr)
 ' Set transmit mode RF output power, in dBm
 '   Valid values: -18..13
