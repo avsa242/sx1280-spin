@@ -137,6 +137,11 @@ PUB StatusReg{}: stat
     cmd(core#GET_STATUS, 0, 0, 0, 0)
     return _status
 
+PUB TESTCONT_PREAMBLE{}
+' Enable continuous preamble transmit
+'   (intended for testing only)
+    cmd(core#SET_TXCONT_PREAMBLE, 0, 0, 0, 0)
+
 PUB TESTCW{}
 ' Enable continuous carrier transmit
 '   (intended for testing only)
