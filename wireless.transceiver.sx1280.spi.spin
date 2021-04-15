@@ -5,7 +5,7 @@
     Description: Driver for the SX1280 2.4GHz transceiver
     Copyright (c) 2021
     Started Feb 14, 2020
-    Updated Apr 12, 2021
+    Updated Apr 15, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -28,6 +28,7 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
+    long _bw, _freq, _intmask, _modulation, _rate, _txpwr
     byte _status
 
 OBJ
@@ -69,6 +70,7 @@ PUB Carrierfreq(freq)
 '   Any other value is ignored
     case freq
         2_400_000..2_500_000:
+            _freq := freq
             freq := u64.multdiv(freq, 1_000_000, F_RES) 
             cmd(core#SET_RFFREQ, @freq, 3, 0, 0)
         other:
@@ -92,6 +94,7 @@ PUB Modulation(mode)
 '   some settings have a modulation-specific meaning
     case mode
         GFSK, LORA, RANGING, FLRC, BLE:
+            _modulation := mode
             idle{}                              ' must be set in idle/standby
             cmd(core#SET_PKTTYPE, @mode, 1, 0, 0)
         other:
@@ -172,19 +175,20 @@ PUB TXPayload(nr_bytes, ptr_buff)
         other:
             return
 
-PUB TXPower(pwr)
+PUB TXPower(pwr): curr_pwr
 ' Set transmit mode RF output power, in dBm
 '   Valid values: -18..13
 '   Any other value is ignored
     case pwr
         -18..13:
             pwr += 18
+            _txpwr := pwr
             pwr.byte[1] := $e0  'xxx hardcoded (ramp time, us)
             cmd(core#SET_TXPARAMS, @pwr, 2, 0, 0)
         other:
-            return
+            return _txpwr-18
 
-PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp)
+PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
 ' Send command to device
     repeat until not busy
     case cmd_val
@@ -194,21 +198,41 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp)
             _status := spi.rd_byte{}
             outa[_CS] := 1
             return
-        $00, $03, $15, $17, $1D, $1F, $C1, $C5, $D1, $D2, $D5: ' 0
+        $00, $03, $17, $1F, $C1, $C5, $D1, $D2, $D5: ' 0
             outa[_CS] := 0
             spi.wr_byte(cmd_val)
             outa[_CS] := 1
             return
+        core#GET_PKTSTATUS:
+            cmd_pkt.byte[0] := core#GET_PKTSTATUS
+            cmd_pkt.byte[1] := core#NOOP
+            outa[_CS] := 0
+            spi.wrblock_lsbf(@cmd_pkt, 2)
+            spi.rdblock_msbf(ptr_resp, 5)
+            outa[_CS] := 1
+            return
+        core#GET_IRQSTATUS:
+            cmd_pkt.byte[0] := core#GET_IRQSTATUS
+            cmd_pkt.byte[1] := core#NOOP
+            outa[_CS] := 0
+            spi.wrblock_lsbf(@cmd_pkt, 2)
+            spi.rdblock_msbf(ptr_resp, 2)
+            outa[_CS] := 1
+            return
+        core#CLR_IRQSTATUS:
+            outa[_CS] := 0
+            spi.wr_byte(cmd_val)
+            spi.wrblock_msbf(ptr_params, 2)
+            outa[_CS] := 1
         $1B, $84, $80, $8A, $88, $96, $98, $9B, $9D, $9E, $A3: ' 1
-        $1A, $8E, $8F, $97: ' 2
+        $1A, $8E, $8F: ' 2
         $83, $82, $86, $88, $8B: ' 3
         $94: ' 6
         $8C: ' 7
-        $8D: ' 8
-
+        core#SET_DIOIRQPARAMS: ' 8
         other:
             return
-
+'    cmd(core#SET_STDBY, @tmp, 1, 0, 0)
     outa[_CS] := 0
     spi.wr_byte(cmd_val)
     spi.wrblock_msbf(ptr_params, nr_params)
@@ -241,14 +265,17 @@ PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
             outa[_CS] := 1
     repeat until not busy{}
 
-PRI writeReg(reg, nr_bytes, ptr_buff) | i
+PRI writeReg(reg_nr, nr_bytes, ptr_buff) | i
 ' Write nr_bytes to register 'reg' stored at ptr_buff
 
+    case reg_nr
+        $9CE:
+        other:
+            return
+
     outa[_CS] := 0
-'    spi.shiftout(_MOSI, _SCK, core#MOSI_BITORDER, 8, reg)
-'    repeat i from 0 to nr_bytes-1
-'        spi.shiftout(_MOSI, _SCK, core#MISO_BITORDER, 8, byte[ptr_buff][i])
-    spi.wr_byte(reg)
+    spi.wr_byte(core#WRITEREG)
+    spi.wrword_msbf(reg_nr)
     spi.wrblock_lsbf(ptr_buff, nr_bytes)
     outa[_CS] := 1
 
