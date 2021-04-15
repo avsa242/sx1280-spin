@@ -54,7 +54,7 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _intmask, _modulation, _opmode, _rate, _txpwr
+    long _bw, _freq, _intmask, _modulation, _opmode, _ramptime, _rate, _txpwr
     byte _status
 
 OBJ
@@ -341,6 +341,19 @@ PUB PacketStatus(ptr_stat)
 '           %100: Sync address 3 detected
     cmd(core#GET_PKTSTATUS, 0, 0, ptr_stat, 5)
 
+PUB RampTime(rtime): curr_rtime
+' Set power amplifier rise/fall time of ramp up/down, in microseconds
+'   Valid values:
+'       *20, 16, 12, 10, 8, 6, 4, 2
+'   Any other returns the current (cached) setting
+    case rtime
+        20, 16, 12, 10, 8, 6, 4, 2:
+            _ramptime := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
+            _ramptime <<= 5
+        other:
+            curr_rtime := _ramptime >> 5
+            return lookupz(curr_rtime: 2, 4, 6, 8, 10, 12, 16, 20)
+
 PUB Reset
 ' Reset device
     outa[_RESET] := 1
@@ -435,13 +448,13 @@ PUB TXPayload(nr_bytes, ptr_buff)
 PUB TXPower(pwr): curr_pwr
 ' Set transmit mode RF output power, in dBm
 '   Valid values: -18..13
-'   Any other value is ignored
+'   Any other value returns the current (cached) setting
     case pwr
         -18..13:
-            pwr += 18
-            _txpwr := pwr
-            pwr.byte[1] := $e0  'xxx hardcoded (ramp time, us)
+            pwr.byte[0] := pwr+18
+            pwr.byte[1] := _ramptime
             cmd(core#SET_TXPARAMS, @pwr, 2, 0, 0)
+            _txpwr := pwr.byte[0]
         other:
             return _txpwr-18
 
@@ -489,7 +502,7 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
         core#SET_DIOIRQPARAMS: ' 8
         other:
             return
-'    cmd(core#SET_STDBY, @tmp, 1, 0, 0)
+
     outa[_CS] := 0
     spi.wr_byte(cmd_val)
     spi.wrblock_msbf(ptr_params, nr_params)
@@ -499,16 +512,7 @@ PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
 ' Read nr_bytes from register 'reg' to address 'ptr_buff'
 
     case reg
-{        core#GETPACKETTYPE, $15, $17, $1D, $1F:
-            cmd_pkt.byte[0] := reg
-            cmd_pkt.byte[1] := core#NOOP
-
-            outa[_CS] := 0
-            time.usleep(125)
-            spi.wrblock_lsbf(@cmd_pkt, 2)
-            spi.rdblock_lsbf(ptr_buff, nr_bytes)
-            outa[_CS] := 1}
-{$153}  0..$FFFF:
+        0..$FFFF:
             cmd_pkt.byte[0] := core#READREG
             cmd_pkt.byte[1] := reg.byte[1]
             cmd_pkt.byte[2] := reg.byte[0]
@@ -524,7 +528,6 @@ PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
 
 PRI writeReg(reg_nr, nr_bytes, ptr_buff) | i
 ' Write nr_bytes to register 'reg' stored at ptr_buff
-
     case reg_nr
         $9CE:
         other:
