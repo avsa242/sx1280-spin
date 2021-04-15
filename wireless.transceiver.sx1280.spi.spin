@@ -171,6 +171,18 @@ PUB Modulation(mode)
         other:
             return
 
+PUB PacketParams(pre_len, sncwd_len, sncwd_mode, plen_mode, plen, crcen, white) | tmp[2]
+' Set packet parameters (XXX temporary)
+    tmp.byte[0] := pre_len
+    tmp.byte[1] := sncwd_len
+    tmp.byte[2] := sncwd_mode
+    tmp.byte[3] := plen_mode
+    tmp.byte[4] := plen
+    tmp.byte[5] := crcen
+    tmp.byte[6] := white
+
+    cmd(core#SET_PKTPARAMS, @tmp, 7, 0, 0)
+
 PUB Reset
 ' Reset device
     outa[_RESET] := 1
