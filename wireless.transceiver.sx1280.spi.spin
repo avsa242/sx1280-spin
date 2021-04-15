@@ -54,7 +54,8 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _intmask, _modulation, _opmode, _ramptime, _rate, _txpwr
+    long _bw, _freq, _intmask, _modulation, _opmode, _preamble_len
+    long _ramptime, _rate, _txpwr
     byte _status
 
 OBJ
@@ -301,9 +302,9 @@ PUB OpMode(mode): curr_mode
         other:
             return _opmode
 
-PUB PacketParams(pre_len, sncwd_len, sncwd_mode, plen_mode, plen, crcen, white) | tmp[2]
+PUB PacketParams(sncwd_len, sncwd_mode, plen_mode, plen, crcen, white) | tmp[2]
 ' Set packet parameters (XXX temporary)
-    tmp.byte[0] := pre_len
+    tmp.byte[0] := _preamble_len
     tmp.byte[1] := sncwd_len
     tmp.byte[2] := sncwd_mode
     tmp.byte[3] := plen_mode
@@ -340,6 +341,17 @@ PUB PacketStatus(ptr_stat)
 '           %010: Sync address 2 detected
 '           %100: Sync address 3 detected
     cmd(core#GET_PKTSTATUS, 0, 0, ptr_stat, 5)
+
+PUB PreambleLen(len): curr_len
+' Set preamble length, in bits (when Modulation() == GFSK)
+'   Valid values: 4, 8, 12, 16, 20, 24, 28, 32
+'   Any other value returns the current (cached) setting
+    case len
+        4, 8, 12, 16, 20, 24, 28, 32:
+            len := lookdownz(len: 4, 8, 12, 16, 20, 24, 28, 32) << 4
+        other:
+            curr_len := _preamble_len >> 4
+            return lookupz(curr_len: 4, 8, 12, 16, 20, 24, 28, 32)
 
 PUB RampTime(rtime): curr_rtime
 ' Set power amplifier rise/fall time of ramp up/down, in microseconds
