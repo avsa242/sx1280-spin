@@ -18,6 +18,13 @@ CON
     ' scale up to preserve precision, then round up as an int
     F_RES               = round((float(OSC) / float(TWO_18)) * 1000.0)
 
+' Operating modes
+    OPMODE_SLEEP        = 0
+    OPMODE_STDBY        = 1
+    OPMODE_FS           = 2
+    OPMODE_TX           = 3
+    OPMODE_RX           = 4
+
 ' Modulation modes
     GFSK                = 0
     LORA                = 1
@@ -47,7 +54,7 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _intmask, _modulation, _rate, _txpwr
+    long _bw, _freq, _intmask, _modulation, _opmode, _rate, _txpwr
     byte _status
 
 OBJ
@@ -271,6 +278,28 @@ PUB Modulation(mode)
             cmd(core#SET_PKTTYPE, @mode, 1, 0, 0)
         other:
             return
+
+PUB OpMode(mode): curr_mode
+' Set operating mode
+'   Valid values:
+'       OPMODE_SLEEP (0): Sleep/lowest power mode
+'       OPMODE_STDBY (1): Standby/idle
+'       OPMODE_FS (2): Frequency synthesis mode (for PLL test purposes only)
+'       OPMODE_TX (3): Transmit mode
+'       OPMODE_RX (4): Receive mode
+'   Any other value returns the current (cached) setting
+    case mode
+        OPMODE_SLEEP:
+            sleep{}
+        OPMODE_STDBY:
+            idle{}
+        OPMODE_FS:
+        OPMODE_TX:
+            txmode{}
+        OPMODE_RX:
+            rxmode{}
+        other:
+            return _opmode
 
 PUB PacketParams(pre_len, sncwd_len, sncwd_mode, plen_mode, plen, crcen, white) | tmp[2]
 ' Set packet parameters (XXX temporary)
