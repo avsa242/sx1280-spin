@@ -181,6 +181,16 @@ PUB Reset
     outa[_RESET] := 1
     time.msleep(20)
 
+PUB RXBandwidth(bw): curr_bw
+' Set transceiver bandwidth (DSB), in Hz
+'   Valid values: 300_000, 600_000, 1_200_000, 2_400_000
+'   Any other value returns the current (cached) setting
+    case bw
+        300_000, 600_000, 1_200_000, 2_400_000:
+            _bw := bw
+        other:
+            return _bw
+
 PUB RXMode{} | tmp
 ' Change chip state to receive
     tmp := 00_00_00                             ' no timeout - stay in RX until
