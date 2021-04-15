@@ -76,6 +76,67 @@ PUB Carrierfreq(freq)
         other:
             return
 
+PUB DataRate(rate) | tmp
+' Set data rate, in bps
+'   Valid values:
+'       GFSK/BLE:
+'       125_000, 250_000, 400_000, 500_000, 800_000, 1_000_000,
+'       1_600_000, 2_000_000
+    case rate
+        2_000_000:
+            tmp.byte[2] := core#GFSK_BLE_BR_2_000_BW_2_4
+        1_600_000:
+            tmp.byte[2] := core#GFSK_BLE_BR_2_000_BW_2_4
+        1_000_000:
+            case _bw
+                2_400_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_1_000_BW_2_4
+                1_200_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_1_000_BW_1_2
+                other:
+                    return
+        800_000:
+            case _bw
+                2_400_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_0_800_BW_2_4
+                1_200_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_0_800_BW_1_2
+                other:
+                    return
+        500_000:
+            case _bw
+                1_200_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_0_500_BW_1_2
+                600_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_0_500_BW_0_6
+                other:
+                    return
+        400_000:
+            case _bw
+                1_200_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_0_400_BW_1_2
+                600_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_0_400_BW_0_6
+                other:
+                    return
+        250_000:
+            case _bw
+                600_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_0_250_BW_0_6
+                300_000:
+                    tmp.byte[2] := core#GFSK_BLE_BR_0_250_BW_0_3
+                other:
+                    return
+        125_000:
+            tmp.byte[2] := core#GFSK_BLE_BR_0_125_BW_0_3
+        other:
+            return
+
+    _rate := rate
+    tmp.byte[1] := core#MOD_IND_1_00
+    tmp.byte[0] := core#BT_0_5
+    cmd(core#SET_MODPARAMS, @tmp, 3, 0, 0)
+
 PUB FIFOTXBasePtr(txp) | tmp
 ' Set start of the transmit buffer within the transceiver's FIFO
     case txp
