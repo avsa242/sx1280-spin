@@ -261,6 +261,34 @@ PUB PacketParams(pre_len, sncwd_len, sncwd_mode, plen_mode, plen, crcen, white) 
 
     cmd(core#SET_PKTPARAMS, @tmp, 7, 0, 0)
 
+PUB PacketStatus(ptr_stat)
+' Get packet status
+'   Valid values:
+'       pointer to buffer (5-byte minimum)
+'   Byte    Desc                Valid when Modulation() is:
+'   0       RFU                         BLE, GFSK, FLRC
+'   0       RSSI when syncword detected LORA, RANGING
+'   1       RSSI_SYNC                   BLE, GFSK, FLRC
+'   1       Signal to noise ratio       LORA, RANGING
+'   2       Errors                      BLE, GFSK, FLRC
+'       b6: Sync addr. detection status
+'       b5: RX payload length greather than expected
+'       b4: CRC check status
+'       b3: Current packet RX/TX aborted
+'       b2: Header received
+'       b1: Payload received
+'       b0: Packet controller busy (RX/TX)
+'   3       Status                      BLE, GFSK, FLRC
+'       b5: NO_ACK field of RX'd packet
+'       b0: Packet sent/TX complete
+'   4       Sync                        BLE, GFSK, FLRC
+'       b2..0: Code of sync address detected
+'           %000: Sync address detection error
+'           %001: Sync address 1 detected
+'           %010: Sync address 2 detected
+'           %100: Sync address 3 detected
+    cmd(core#GET_PKTSTATUS, 0, 0, ptr_stat, 5)
+
 PUB Reset
 ' Reset device
     outa[_RESET] := 1
@@ -335,7 +363,7 @@ PUB TESTFS{}
 PUB TXMode{} | tmp
 ' Change chip state to transmit
     tmp := 00_00_00                             ' no timeout, stay in TX until
-    cmd(core#SET_TX, @tmp, 3, 0, 0)             ' packet is transmitted
+    cmd(core#SET_TX, @tmp, 3, 0, 0)             ' packet is transmitted xxx hardcoded
 
 PUB TXPayload(nr_bytes, ptr_buff)
 ' Transmit data queued in FIFO
