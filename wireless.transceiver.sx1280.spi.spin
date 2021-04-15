@@ -12,18 +12,37 @@
 
 CON
 
-    OSC         = 52_000_000
-    TWO_18      = 1 << 18
+    OSC                 = 52_000_000
+    TWO_18              = 1 << 18
     ' calc frequency resolution: (chip oscillator / 2^18)
     ' scale up to preserve precision, then round up as an int
-    F_RES       = round((float(OSC) / float(TWO_18)) * 1000.0)
+    F_RES               = round((float(OSC) / float(TWO_18)) * 1000.0)
 
 ' Modulation modes
-    GFSK        = 0
-    LORA        = 1
-    RANGING     = 2
-    FLRC        = 3
-    BLE         = 4
+    GFSK                = 0
+    LORA                = 1
+    RANGING             = 2
+    FLRC                = 3
+    BLE                 = 4
+
+' Interrupts
+    TXDONE              = 1 << 0
+    RXDONE              = 1 << 1
+    SYNCWDVALID         = 1 << 2
+    SYNCWDERROR         = 1 << 3
+    HDRVALID            = 1 << 4
+    HDRERROR            = 1 << 5
+    CRCERROR            = 1 << 6
+    RNG_SLVRESPDONE     = 1 << 7
+    RNG_SLVRESPDISCARD  = 1 << 8
+    RNG_MASTRESULTVALID = 1 << 9
+    RNG_MASTTIMEOUT     = 1 << 10
+    RNG_SLVREQVALID     = 1 << 11
+    CADDONE             = 1 << 12
+    CADDETECT           = 1 << 13
+    RXTXTIMEOUT         = 1 << 14
+    PREAMDETECT         = 1 << 15
+    ADVRANGEDONE        = 1 << 15
 
 VAR
 
@@ -152,10 +171,37 @@ PUB Idle{} | tmp
     tmp := 0                                    ' [b0]: Run on RC OSC (13MHz)
     cmd(core#SET_STDBY, @tmp, 1, 0, 0)
 
-PUB IntMask(mask) | tmp[2]
+PUB IntClear(mask)
+' Clear interrupts
+'   Valid values:
+'       Bit Desc.                           Valid when Modulation() is:
+'       15  Preamble detected               LORA, GFSK, BLE
+'       15  Adv. ranging done               RANGING
+'       14  RxTx Timeout                    All
+'       13  Channel act. detected           LORA
+'       12  Ch. act. check done             LORA
+'       11  Range request valid (slave)     RANGING
+'       10  Range timeout (master)          RANGING
+'       9   Range result valid (master)     RANGING
+'       8   Range req. discarded (slave)    LORA, RANGING
+'       7   Range resp. complete (slave)    RANGING
+'       6   CRC error                       GFSK, BLE, FLRC, LORA
+'       5   Header error                    LORA, RANGING
+'       4   Header valid                    LORA, RANGING
+'       3   Syncword error                  FLRC
+'       2   Syncword valid                  GFSK, BLE, FLRC
+'       1   RX complete                     GFSK, BLE, FLRC, LORA
+'       0   TX complete                     GFSK, BLE< FLRC, LORA
+    case mask
+        %0000_0000_0000_0000..%1111_1111_1111_1111:
+            cmd(core#CLR_IRQSTATUS, @mask, 2, 0, 0)
+        other:
+            return
+
+PUB IntMask(mask): curr_mask | tmp[2]
 ' Set interrupt mask
 '   Valid values:
-'       Bit Desc.                       Valid when Modulation() is:
+'       Bit Desc.                           Valid when Modulation() is:
 '       15  Preamble detected               LORA, GFSK, BLE
 '       15  Adv. ranging done               RANGING
 '       14  RxTx Timeout                    All
