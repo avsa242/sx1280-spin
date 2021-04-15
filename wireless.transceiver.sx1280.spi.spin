@@ -233,6 +233,12 @@ PUB StatusReg{}: stat
     cmd(core#GET_STATUS, 0, 0, 0, 0)
     return _status
 
+PUB SyncWord(ptr_sw)
+' Set syncword
+'   Valid values:
+'       pointer to 5-byte array containing syncword
+    writereg(core#SYNCWD1, 5, ptr_sw)
+
 PUB TESTCONT_PREAMBLE{}
 ' Enable continuous preamble transmit
 '   (intended for testing only)
