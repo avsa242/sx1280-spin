@@ -152,6 +152,38 @@ PUB Idle{} | tmp
     tmp := 0                                    ' [b0]: Run on RC OSC (13MHz)
     cmd(core#SET_STDBY, @tmp, 1, 0, 0)
 
+PUB IntMask(mask) | tmp[2]
+' Set interrupt mask
+'   Valid values:
+'       Bit Desc.                       Valid when Modulation() is:
+'       15  Preamble detected               LORA, GFSK, BLE
+'       15  Adv. ranging done               RANGING
+'       14  RxTx Timeout                    All
+'       13  Ch. act. detected               LORA
+'       12  Ch. act. check done             LORA
+'       11  Range req. valid (slave)        RANGING
+'       10  Range timeout (master)          RANGING
+'       9   Range result valid (master)     RANGING
+'       8   Range req. discarded (slave)    LORA, RANGING
+'       7   Range resp. complete (slave)    RANGING
+'       6   CRC error                       GFSK, BLE, FLRC, LORA
+'       5   Header error                    LORA, RANGING
+'       4   Header valid                    LORA, RANGING
+'       3   Syncword error                  FLRC
+'       2   Syncword valid                  GFSK, BLE, FLRC
+'       1   RX complete                     GFSK, BLE, FLRC, LORA
+'       0   TX complete                     GFSK, BLE< FLRC, LORA
+    longfill(@tmp, 0, 2)
+    case mask
+        %0000_0000_0000_0000..%1111_1111_1111_1111:
+            _intmask := mask
+            tmp.byte[0] := mask.byte[1]
+            tmp.byte[1] := mask.byte[0]
+            'tmp.byte[2..7] := 0 xxx hardcoded (DIO config)
+            cmd(core#SET_DIOIRQPARAMS, @tmp, 8, 0, 0)
+        other:
+            return _intmask
+
 PUB Modulation(mode)
 ' Set OTA modulation
 '   Valid values:
