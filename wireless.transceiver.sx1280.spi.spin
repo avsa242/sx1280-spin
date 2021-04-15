@@ -76,6 +76,16 @@ PUB Carrierfreq(freq)
         other:
             return
 
+PUB FIFOTXBasePtr(txp) | tmp
+' Set start of the transmit buffer within the transceiver's FIFO
+    case txp
+        0..255:
+            tmp.byte[1] := txp
+            tmp.byte[0] := 127  'xxx RX buffer ptr hardcoded
+            cmd(core#SET_BUFF_BASEADDR, @tmp, 2, 0, 0)
+        other:
+            return
+
 PUB Idle{} | tmp
 ' Change transceiver to idle state
     tmp := 0                                    ' [b0]: Run on RC OSC (13MHz)
