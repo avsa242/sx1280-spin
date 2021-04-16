@@ -348,7 +348,7 @@ PUB PreambleLen(len): curr_len
 '   Any other value returns the current (cached) setting
     case len
         4, 8, 12, 16, 20, 24, 28, 32:
-            len := lookdownz(len: 4, 8, 12, 16, 20, 24, 28, 32) << 4
+            _preamble_len := lookdownz(len: 4, 8, 12, 16, 20, 24, 28, 32) << 4
         other:
             curr_len := _preamble_len >> 4
             return lookupz(curr_len: 4, 8, 12, 16, 20, 24, 28, 32)
@@ -506,11 +506,17 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
             spi.wr_byte(cmd_val)
             spi.wrblock_msbf(ptr_params, 2)
             outa[_CS] := 1
+            return
         $1B, $84, $80, $8A, $88, $96, $98, $9B, $9D, $9E, $A3: ' 1
         $1A, $8E, $8F: ' 2
         $83, $82, $86, $88, $8B: ' 3
         $94: ' 6
-        $8C: ' 7
+        core#SET_PKTPARAMS: ' 7
+            outa[_CS] := 0
+            spi.wr_byte(cmd_val)
+            spi.wrblock_lsbf(ptr_params, 7)
+            outa[_CS] := 1
+            return
         core#SET_DIOIRQPARAMS: ' 8
         other:
             return
