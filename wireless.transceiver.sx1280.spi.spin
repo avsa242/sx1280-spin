@@ -68,9 +68,9 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _crclen, _freq, _intmask, _modulation, _opmode, _paylen
-    long _pktlencfg, _preamble_len, _ramptime, _rate, _syncwd_len, _syncwd_mode
-    long _txpwr
+    long _bw, _crclen, _data_whiten, _freq, _intmask, _modulation, _opmode
+    long _paylen, _pktlencfg, _preamble_len, _ramptime, _rate, _syncwd_len
+    long _syncwd_mode, _txpwr
     byte _status
 
 OBJ
@@ -206,6 +206,17 @@ PUB DataRate(rate) | tmp
     tmp.byte[1] := core#MOD_IND_1_00
     tmp.byte[0] := core#BT_0_5
     cmd(core#SET_MODPARAMS, @tmp, 3, 0, 0)
+
+PUB DataWhitening(state): curr_state
+' Enable data whitening
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value returns the current (cached) setting
+    case ||(state)
+        0, 1:
+            _data_whiten := lookupz(||(state): $08, $00)
+        other:
+            ' negate lookdown result, so 1 becomes -1 (TRUE)
+            return -lookdown(_data_whiten: $08, $00)
 
 PUB FIFOTXBasePtr(txp) | tmp
 ' Set start of the transmit buffer within the transceiver's FIFO
@@ -345,7 +356,7 @@ PUB OpMode(mode): curr_mode
         other:
             return _opmode
 
-PUB PacketParams(white) | tmp[2]
+PUB PacketParams{} | tmp[2]
 ' Set packet parameters (XXX temporary)
     tmp.byte[0] := _preamble_len
     tmp.byte[1] := _syncwd_len
@@ -353,7 +364,7 @@ PUB PacketParams(white) | tmp[2]
     tmp.byte[3] := _pktlencfg
     tmp.byte[4] := _paylen
     tmp.byte[5] := _crclen
-    tmp.byte[6] := white
+    tmp.byte[6] := _data_whiten
 
     cmd(core#SET_PKTPARAMS, @tmp, 7, 0, 0)
 
