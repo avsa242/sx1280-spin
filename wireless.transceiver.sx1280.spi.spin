@@ -61,10 +61,14 @@ CON
     SWD2_3              = $60
     SWD1_2_3            = $70
 
+' Packet length modes
+    PKTLEN_FIXED        = $00
+    PKTLEN_VAR          = $20
+
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _intmask, _modulation, _opmode, _preamble_len
+    long _bw, _freq, _intmask, _modulation, _opmode, _pktlencfg, _preamble_len
     long _ramptime, _rate, _syncwd_len, _syncwd_mode, _txpwr
     byte _status
 
@@ -312,12 +316,12 @@ PUB OpMode(mode): curr_mode
         other:
             return _opmode
 
-PUB PacketParams(plen_mode, plen, crcen, white) | tmp[2]
+PUB PacketParams(plen, crcen, white) | tmp[2]
 ' Set packet parameters (XXX temporary)
     tmp.byte[0] := _preamble_len
     tmp.byte[1] := _syncwd_len
     tmp.byte[2] := _syncwd_mode
-    tmp.byte[3] := plen_mode
+    tmp.byte[3] := _pktlencfg
     tmp.byte[4] := plen
     tmp.byte[5] := crcen
     tmp.byte[6] := white
@@ -351,6 +355,18 @@ PUB PacketStatus(ptr_stat)
 '           %010: Sync address 2 detected
 '           %100: Sync address 3 detected
     cmd(core#GET_PKTSTATUS, 0, 0, ptr_stat, 5)
+
+PUB PayloadLenCfg(mode): curr_mode
+' Set packet length mode
+'   Valid values:
+'       PKTLEN_FIXED ($00): Fixed-length packet/payload
+'       PKTLEN_VAR ($20): Variable-length packet/payload
+'   Any other value returns the current (cached) setting
+    case mode
+        PKTLEN_FIXED, PKTLEN_VAR:
+            _pktlencfg := mode
+        other:
+            return mode
 
 PUB PreambleLen(len): curr_len
 ' Set preamble length, in bits (when Modulation() == GFSK)
