@@ -55,7 +55,7 @@ VAR
 
     long _CS, _RESET, _BUSY
     long _bw, _freq, _intmask, _modulation, _opmode, _preamble_len
-    long _ramptime, _rate, _txpwr
+    long _ramptime, _rate, _syncwd_len, _txpwr
     byte _status
 
 OBJ
@@ -302,10 +302,10 @@ PUB OpMode(mode): curr_mode
         other:
             return _opmode
 
-PUB PacketParams(sncwd_len, sncwd_mode, plen_mode, plen, crcen, white) | tmp[2]
+PUB PacketParams(sncwd_mode, plen_mode, plen, crcen, white) | tmp[2]
 ' Set packet parameters (XXX temporary)
     tmp.byte[0] := _preamble_len
-    tmp.byte[1] := sncwd_len
+    tmp.byte[1] := _syncwd_len
     tmp.byte[2] := sncwd_mode
     tmp.byte[3] := plen_mode
     tmp.byte[4] := plen
@@ -421,6 +421,16 @@ PUB SyncWord(ptr_sw)
 '   Valid values:
 '       pointer to 5-byte array containing syncword
     writereg(core#SYNCWD1, 5, ptr_sw)
+
+PUB SyncWordLen(length): curr_len
+' Set syncword length, in bytes
+'   Valid values: 1..5
+'   Any other value returns the current (cached) setting
+    case length
+        1..5:
+            _syncwd_len := lookup(length: $00, $02, $04, $06, $08)
+        other:
+            return lookdown(_syncwd_len: 1..5)
 
 PUB TESTCONT_PREAMBLE{}
 ' Enable continuous preamble transmit
