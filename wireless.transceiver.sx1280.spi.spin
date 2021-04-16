@@ -51,11 +51,21 @@ CON
     PREAMDETECT         = 1 << 15
     ADVRANGEDONE        = 1 << 15
 
+' Syncword modes
+    SWD_DISABLE         = $00
+    SWD1                = $10
+    SWD2                = $20
+    SWD1_2              = $30
+    SWD3                = $40
+    SWD1_3              = $50
+    SWD2_3              = $60
+    SWD1_2_3            = $70
+
 VAR
 
     long _CS, _RESET, _BUSY
     long _bw, _freq, _intmask, _modulation, _opmode, _preamble_len
-    long _ramptime, _rate, _syncwd_len, _txpwr
+    long _ramptime, _rate, _syncwd_len, _syncwd_mode, _txpwr
     byte _status
 
 OBJ
@@ -302,11 +312,11 @@ PUB OpMode(mode): curr_mode
         other:
             return _opmode
 
-PUB PacketParams(sncwd_mode, plen_mode, plen, crcen, white) | tmp[2]
+PUB PacketParams(plen_mode, plen, crcen, white) | tmp[2]
 ' Set packet parameters (XXX temporary)
     tmp.byte[0] := _preamble_len
     tmp.byte[1] := _syncwd_len
-    tmp.byte[2] := sncwd_mode
+    tmp.byte[2] := _syncwd_mode
     tmp.byte[3] := plen_mode
     tmp.byte[4] := plen
     tmp.byte[5] := crcen
@@ -431,6 +441,25 @@ PUB SyncWordLen(length): curr_len
             _syncwd_len := lookup(length: $00, $02, $04, $06, $08)
         other:
             return lookdown(_syncwd_len: 1..5)
+
+PUB SyncWordMode(mode): curr_mode
+' Set syncword mode/combination
+'   Valid values:
+'       Symbol              RXMode()            TXMode()
+'       SWD_DISABLE ($00)   Disable syncword    No syncword
+'       SWD1 ($10)          Syncword 1          Syncword 1
+'       SWD2 ($20)          Syncword 2          Syncword 2
+'       SWD1_2 ($30)        Syncword 1 or 2     Syncword 1
+'       SWD3 ($40)          Syncword 3          Syncword 3
+'       SWD1_3 ($50)        Syncword 1 or 3     Syncword 1
+'       SWD2_3 ($60)        Syncword 2 or 3     Syncword 1
+'       SWD1_2_3 ($70)      Syncword 1, 2 or 3  Syncword 1
+'   Any other value returns the current (cached) setting
+    case mode
+        SWD_DISABLE, SWD1, SWD2, SWD1_2, SWD3, SWD1_3, SWD2_3, SWD1_2_3:
+            _syncwd_mode := mode
+        other:
+            return _syncwd_mode
 
 PUB TESTCONT_PREAMBLE{}
 ' Enable continuous preamble transmit
