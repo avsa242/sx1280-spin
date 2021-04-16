@@ -68,8 +68,9 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _intmask, _modulation, _opmode, _paylen, _pktlencfg
-    long _preamble_len, _ramptime, _rate, _syncwd_len, _syncwd_mode, _txpwr
+    long _bw, _crclen, _freq, _intmask, _modulation, _opmode, _paylen
+    long _pktlencfg, _preamble_len, _ramptime, _rate, _syncwd_len, _syncwd_mode
+    long _txpwr
     byte _status
 
 OBJ
@@ -116,6 +117,34 @@ PUB Carrierfreq(freq)
             cmd(core#SET_RFFREQ, @freq, 3, 0, 0)
         other:
             return
+
+PUB CRCCheckEnabled(state): curr_state
+' Enable CRC generation (TX) and checking (RX)
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value returns the current (cached) setting
+    case ||(state)
+        0:
+            _crclen := 0
+        1:
+            ' is CRC length already set to something valid? (1 or 2 bytes)
+            ' if so, leave it as-is
+            ' if it's not enabled yet (0), enable it (set it to 1 byte)
+            ifnot lookdown(_crclen: $10, $20)
+                _crclen := $10
+        other:
+            ' are CRC checks enabled? (1 or 2)
+            ' if so, return TRUE
+            return (lookdown(_crclen: $10, $20) > 0)
+
+PUB CRCLength(length): curr_len
+' Set CRC encoding scheme length, in bytes
+'   Valid values: 0 (no CRC), 1, 2
+'   Any other value returns the current (cached) setting
+    case length
+        0, 1, 2:
+            _crclen := length << 4
+        other:
+            return _crclen >> 4
 
 PUB DataRate(rate) | tmp
 ' Set data rate, in bps
@@ -316,14 +345,14 @@ PUB OpMode(mode): curr_mode
         other:
             return _opmode
 
-PUB PacketParams(crcen, white) | tmp[2]
+PUB PacketParams(white) | tmp[2]
 ' Set packet parameters (XXX temporary)
     tmp.byte[0] := _preamble_len
     tmp.byte[1] := _syncwd_len
     tmp.byte[2] := _syncwd_mode
     tmp.byte[3] := _pktlencfg
     tmp.byte[4] := _paylen
-    tmp.byte[5] := crcen
+    tmp.byte[5] := _crclen
     tmp.byte[6] := white
 
     cmd(core#SET_PKTPARAMS, @tmp, 7, 0, 0)
