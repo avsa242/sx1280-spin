@@ -68,9 +68,14 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _crclen, _data_whiten, _freq, _intmask, _modulation, _opmode
-    long _paylen, _pktlencfg, _preamble_len, _ramptime, _rate, _syncwd_len
-    long _syncwd_mode, _txpwr
+    long _bw, _freq, _intmask, _modulation, _opmode
+    long _ramptime, _rate
+    long _txpwr
+
+    ' PACKETPARAMS (do not change order)
+    byte _preamble_len, _syncwd_len, _syncwd_mode, _pktlencfg
+    byte _paylen, _crclen, _data_whiten
+
     byte _status
 
 OBJ
@@ -136,6 +141,8 @@ PUB CRCCheckEnabled(state): curr_state
             ' if so, return TRUE
             return (lookdown(_crclen: $10, $20) > 0)
 
+    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+
 PUB CRCLength(length): curr_len
 ' Set CRC encoding scheme length, in bytes
 '   Valid values: 0 (no CRC), 1, 2
@@ -145,6 +152,8 @@ PUB CRCLength(length): curr_len
             _crclen := length << 4
         other:
             return _crclen >> 4
+
+    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
 PUB DataRate(rate) | tmp
 ' Set data rate, in bps
@@ -217,6 +226,8 @@ PUB DataWhitening(state): curr_state
         other:
             ' negate lookdown result, so 1 becomes -1 (TRUE)
             return -lookdown(_data_whiten: $08, $00)
+
+    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
 PUB FIFOTXBasePtr(txp) | tmp
 ' Set start of the transmit buffer within the transceiver's FIFO
@@ -356,18 +367,6 @@ PUB OpMode(mode): curr_mode
         other:
             return _opmode
 
-PUB PacketParams{} | tmp[2]
-' Set packet parameters (XXX temporary)
-    tmp.byte[0] := _preamble_len
-    tmp.byte[1] := _syncwd_len
-    tmp.byte[2] := _syncwd_mode
-    tmp.byte[3] := _pktlencfg
-    tmp.byte[4] := _paylen
-    tmp.byte[5] := _crclen
-    tmp.byte[6] := _data_whiten
-
-    cmd(core#SET_PKTPARAMS, @tmp, 7, 0, 0)
-
 PUB PacketStatus(ptr_stat)
 ' Get packet status
 '   Valid values:
@@ -406,6 +405,8 @@ PUB PayloadLen(length): curr_len
         other:
             return _paylen
 
+    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+
 PUB PayloadLenCfg(mode): curr_mode
 ' Set packet length mode
 '   Valid values:
@@ -418,6 +419,8 @@ PUB PayloadLenCfg(mode): curr_mode
         other:
             return mode
 
+    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+
 PUB PreambleLen(len): curr_len
 ' Set preamble length, in bits (when Modulation() == GFSK)
 '   Valid values: 4, 8, 12, 16, 20, 24, 28, 32
@@ -428,6 +431,8 @@ PUB PreambleLen(len): curr_len
         other:
             curr_len := _preamble_len >> 4
             return lookupz(curr_len: 4, 8, 12, 16, 20, 24, 28, 32)
+
+    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
 PUB RampTime(rtime): curr_rtime
 ' Set power amplifier rise/fall time of ramp up/down, in microseconds
@@ -508,6 +513,8 @@ PUB SyncWordLen(length): curr_len
         other:
             return lookdown(_syncwd_len: 1..5)
 
+    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+
 PUB SyncWordMode(mode): curr_mode
 ' Set syncword mode/combination
 '   Valid values:
@@ -526,6 +533,8 @@ PUB SyncWordMode(mode): curr_mode
             _syncwd_mode := mode
         other:
             return _syncwd_mode
+
+    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
 PUB TESTCONT_PREAMBLE{}
 ' Enable continuous preamble transmit
