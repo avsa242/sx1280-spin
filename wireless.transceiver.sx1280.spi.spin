@@ -68,8 +68,8 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _intmask, _modulation, _opmode, _pktlencfg, _preamble_len
-    long _ramptime, _rate, _syncwd_len, _syncwd_mode, _txpwr
+    long _bw, _freq, _intmask, _modulation, _opmode, _paylen, _pktlencfg
+    long _preamble_len, _ramptime, _rate, _syncwd_len, _syncwd_mode, _txpwr
     byte _status
 
 OBJ
@@ -316,13 +316,13 @@ PUB OpMode(mode): curr_mode
         other:
             return _opmode
 
-PUB PacketParams(plen, crcen, white) | tmp[2]
+PUB PacketParams(crcen, white) | tmp[2]
 ' Set packet parameters (XXX temporary)
     tmp.byte[0] := _preamble_len
     tmp.byte[1] := _syncwd_len
     tmp.byte[2] := _syncwd_mode
     tmp.byte[3] := _pktlencfg
-    tmp.byte[4] := plen
+    tmp.byte[4] := _paylen
     tmp.byte[5] := crcen
     tmp.byte[6] := white
 
@@ -355,6 +355,16 @@ PUB PacketStatus(ptr_stat)
 '           %010: Sync address 2 detected
 '           %100: Sync address 3 detected
     cmd(core#GET_PKTSTATUS, 0, 0, ptr_stat, 5)
+
+PUB PayloadLen(length): curr_len
+' Set packet length, in bytes
+'   Valid values: 0..255
+'   Any other value returns the current (cached) setting
+    case length
+        0..255:
+            _paylen := length
+        other:
+            return _paylen
 
 PUB PayloadLenCfg(mode): curr_mode
 ' Set packet length mode
