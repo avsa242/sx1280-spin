@@ -65,6 +65,10 @@ CON
     PKTLEN_FIXED        = $00
     PKTLEN_VAR          = $20
 
+' Packet status bits
+    PSTAT_PAYLDSENT     = 1 << 0
+    PSTAT_PAYLDRDY      = 1 << 1
+
 VAR
 
     long _CS, _RESET, _BUSY
@@ -76,7 +80,10 @@ VAR
     byte _preamble_len, _syncwd_len, _syncwd_mode, _pktlencfg
     byte _paylen, _crclen, _data_whiten
 
-    byte _status
+    ' SET_BUFF_BASEADDR
+    byte _txfifoptr, _rxfifoptr
+
+    byte _status, _pktstatus[5]
 
 OBJ
 
@@ -161,6 +168,7 @@ PUB DataRate(rate) | tmp
 '       GFSK/BLE:
 '       125_000, 250_000, 400_000, 500_000, 800_000, 1_000_000,
 '       1_600_000, 2_000_000
+'   NOTE: Bandwidth is set using RXBandwidth()
     case rate
         2_000_000:
             tmp.byte[2] := core#GFSK_BLE_BR_2_000_BW_2_4
@@ -229,15 +237,27 @@ PUB DataWhitening(state): curr_state
 
     cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
-PUB FIFOTXBasePtr(txp) | tmp
+PUB FIFORXBasePtr(rxp)
+' Set start of the receive buffer within the transceiver's FIFO
+'   Valid values: 0..255
+'   Any other value returns the current (cached) setting
+    case rxp
+        0..255:
+            _rxfifoptr := rxp
+            cmd(core#SET_BUFF_BASEADDR, @_txfifoptr, 2, 0, 0)
+        other:
+            return _rxfifoptr
+
+PUB FIFOTXBasePtr(txp)
 ' Set start of the transmit buffer within the transceiver's FIFO
+'   Valid values: 0..255
+'   Any other value returns the current (cached) setting
     case txp
         0..255:
-            tmp.byte[1] := txp
-            tmp.byte[0] := 127  'xxx RX buffer ptr hardcoded
-            cmd(core#SET_BUFF_BASEADDR, @tmp, 2, 0, 0)
+            _txfifoptr := txp
+            cmd(core#SET_BUFF_BASEADDR, @_txfifoptr, 2, 0, 0)
         other:
-            return
+            return _txfifoptr
 
 PUB Idle{} | tmp
 ' Change transceiver to idle state
@@ -421,6 +441,18 @@ PUB PayloadLenCfg(mode): curr_mode
 
     cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
+PUB PayloadReady{}: flag
+' Flag indicating payload ready/received
+'   Returns: TRUE (-1) or FALSE (0)
+    packetstatus(@_pktstatus)
+    return ((_pktstatus[] & PSTAT_PAYLDRDY) <> 0)
+
+PUB PayloadSent{}: flag
+' Flag indicating payload sent
+'   Returns: TRUE (-1) or FALSE (0)
+    packetstatus(@_pktstatus)
+    return ((_pktstatus[3] & PSTAT_PAYLDSENT) <> 0)
+
 PUB PreambleLen(len): curr_len
 ' Set preamble length, in bits (when Modulation() == GFSK)
 '   Valid values: 4, 8, 12, 16, 20, 24, 28, 32
@@ -461,6 +493,7 @@ PUB RXBandwidth(bw): curr_bw
 ' Set transceiver bandwidth (DSB), in Hz
 '   Valid values: 300_000, 600_000, 1_200_000, 2_400_000
 '   Any other value returns the current (cached) setting
+'   NOTE: Cached setting - commit to transceiver using DataRate()
     case bw
         300_000, 600_000, 1_200_000, 2_400_000:
             _bw := bw
@@ -604,7 +637,7 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
             cmd_pkt.byte[1] := core#NOOP
             outa[_CS] := 0
             spi.wrblock_lsbf(@cmd_pkt, 2)
-            spi.rdblock_msbf(ptr_resp, 5)
+            spi.rdblock_lsbf(ptr_resp, 5)
             outa[_CS] := 1
             return
         core#GET_IRQSTATUS:
@@ -622,7 +655,13 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
             outa[_CS] := 1
             return
         $1B, $84, $80, $8A, $88, $96, $98, $9B, $9D, $9E, $A3: ' 1
-        $1A, $8E, $8F: ' 2
+        $1A, $8E: ' 2
+        core#SET_BUFF_BASEADDR:
+            outa[_CS] := 0
+            spi.wr_byte(cmd_val)
+            spi.wrblock_lsbf(ptr_params, 2)
+            outa[_CS] := 1
+            return
         $83, $82, $86, $88, $8B: ' 3
         $94: ' 6
         core#SET_PKTPARAMS: ' 7
@@ -649,7 +688,6 @@ PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
             cmd_pkt.byte[1] := reg.byte[1]
             cmd_pkt.byte[2] := reg.byte[0]
             cmd_pkt.byte[3] := core#NOOP
-
             repeat until not busy{}
             outa[_CS] := 0
             time.usleep(125)
@@ -661,7 +699,7 @@ PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
 PRI writeReg(reg_nr, nr_bytes, ptr_buff) | i
 ' Write nr_bytes to register 'reg' stored at ptr_buff
     case reg_nr
-        $9CE:
+        core#SYNCWD1:
         other:
             return
 
