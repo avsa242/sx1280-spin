@@ -174,57 +174,57 @@ PUB DataRate(rate) | tmp
 '   NOTE: Bandwidth is set using RXBandwidth()
     case rate
         2_000_000:
-            tmp.byte[2] := core#GFSK_BLE_BR_2_000_BW_2_4
+            tmp.byte[0] := core#GFSK_BLE_BR_2_000_BW_2_4
         1_600_000:
-            tmp.byte[2] := core#GFSK_BLE_BR_2_000_BW_2_4
+            tmp.byte[0] := core#GFSK_BLE_BR_2_000_BW_2_4
         1_000_000:
             case _bw
                 2_400_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_1_000_BW_2_4
+                    tmp.byte[0] := core#GFSK_BLE_BR_1_000_BW_2_4
                 1_200_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_1_000_BW_1_2
+                    tmp.byte[0] := core#GFSK_BLE_BR_1_000_BW_1_2
                 other:
                     return
         800_000:
             case _bw
                 2_400_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_0_800_BW_2_4
+                    tmp.byte[0] := core#GFSK_BLE_BR_0_800_BW_2_4
                 1_200_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_0_800_BW_1_2
+                    tmp.byte[0] := core#GFSK_BLE_BR_0_800_BW_1_2
                 other:
                     return
         500_000:
             case _bw
                 1_200_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_0_500_BW_1_2
+                    tmp.byte[0] := core#GFSK_BLE_BR_0_500_BW_1_2
                 600_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_0_500_BW_0_6
+                    tmp.byte[0] := core#GFSK_BLE_BR_0_500_BW_0_6
                 other:
                     return
         400_000:
             case _bw
                 1_200_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_0_400_BW_1_2
+                    tmp.byte[0] := core#GFSK_BLE_BR_0_400_BW_1_2
                 600_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_0_400_BW_0_6
+                    tmp.byte[0] := core#GFSK_BLE_BR_0_400_BW_0_6
                 other:
                     return
         250_000:
             case _bw
                 600_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_0_250_BW_0_6
+                    tmp.byte[0] := core#GFSK_BLE_BR_0_250_BW_0_6
                 300_000:
-                    tmp.byte[2] := core#GFSK_BLE_BR_0_250_BW_0_3
+                    tmp.byte[0] := core#GFSK_BLE_BR_0_250_BW_0_3
                 other:
                     return
         125_000:
-            tmp.byte[2] := core#GFSK_BLE_BR_0_125_BW_0_3
+            tmp.byte[0] := core#GFSK_BLE_BR_0_125_BW_0_3
         other:
             return
 
     _rate := rate
     tmp.byte[1] := _modidx
-    tmp.byte[0] := core#BT_0_5
+    tmp.byte[2] := core#BT_0_5
     cmd(core#SET_MODPARAMS, @tmp, 3, 0, 0)
 
 PUB DataWhitening(state): curr_state
@@ -682,7 +682,13 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
             spi.wrblock_lsbf(ptr_params, 2)
             outa[_CS] := 1
             return
-        $83, $82, $86, $88, $8B: ' 3
+        $83, $82, $86, $88: ' 3
+        core#SET_MODPARAMS:
+            outa[_CS] := 0
+            spi.wr_byte(cmd_val)
+            spi.wrblock_lsbf(ptr_params, 3)
+            outa[_CS] := 1
+            return
         $94: ' 6
         core#SET_PKTPARAMS: ' 7
             outa[_CS] := 0
