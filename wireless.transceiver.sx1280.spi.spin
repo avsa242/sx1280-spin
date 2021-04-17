@@ -5,7 +5,7 @@
     Description: Driver for the SX1280 2.4GHz transceiver
     Copyright (c) 2021
     Started Feb 14, 2020
-    Updated Apr 15, 2021
+    Updated Apr 17, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -84,6 +84,9 @@ VAR
     byte _txfifoptr, _rxfifoptr
 
     byte _status, _pktstatus[5]
+
+    ' SET_MODPARAMS
+    byte _modidx
 
 OBJ
 
@@ -220,7 +223,7 @@ PUB DataRate(rate) | tmp
             return
 
     _rate := rate
-    tmp.byte[1] := core#MOD_IND_1_00
+    tmp.byte[1] := _modidx
     tmp.byte[0] := core#BT_0_5
     cmd(core#SET_MODPARAMS, @tmp, 3, 0, 0)
 
@@ -365,6 +368,22 @@ PUB Modulation(mode)
         other:
             return
 
+PUB ModulationIdx(idx): curr_idx
+' Set modulation index
+'   Valid values:
+'       0_35 (=0.35), 0_5..4_00 (=4.00), in increments of 0_25
+'   Any other value returns the current (cached) setting
+'   NOTE: For use when Modulation() == GFSK
+'   NOTE: Cached setting - commit to transceiver using DataRate()
+    case idx
+        0_35..4_00:
+            _modidx := (idx/25)-1
+        other:
+            if _modidx == 0
+                return 0_35
+            else
+                return (_modidx + 1) * 25
+
 PUB OpMode(mode): curr_mode
 ' Set operating mode
 '   Valid values:
@@ -445,7 +464,7 @@ PUB PayloadReady{}: flag
 ' Flag indicating payload ready/received
 '   Returns: TRUE (-1) or FALSE (0)
     packetstatus(@_pktstatus)
-    return ((_pktstatus[] & PSTAT_PAYLDRDY) <> 0)
+    return ((_pktstatus[2] & PSTAT_PAYLDRDY) <> 0)
 
 PUB PayloadSent{}: flag
 ' Flag indicating payload sent
@@ -471,6 +490,7 @@ PUB RampTime(rtime): curr_rtime
 '   Valid values:
 '       *20, 16, 12, 10, 8, 6, 4, 2
 '   Any other returns the current (cached) setting
+'   NOTE: Cached setting - commit to transceiver using TXPower()
     case rtime
         20, 16, 12, 10, 8, 6, 4, 2:
             _ramptime := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
