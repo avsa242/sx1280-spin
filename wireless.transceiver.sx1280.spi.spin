@@ -82,6 +82,9 @@ VAR
     byte _preamble_len, _syncwd_len, _syncwd_mode, _pktlencfg
     byte _paylen, _crclen, _data_whiten
 
+    ' GET_RXBUFFSTATUS
+    byte _lastrx_paylen, _rxbuff_stptr
+
     ' SET_BUFF_BASEADDR
     byte _txfifoptr, _rxfifoptr
 
@@ -268,6 +271,12 @@ PUB FIFORXBasePtr(rxp)
         other:
             return _rxfifoptr
 
+PUB FIFORXCurrentAddr{}: addr
+' Start address (in FIFO) of last packet received
+'   Returns: Starting address of last packet received
+    rxbuffstatus{}
+    return _lastrx_paylen
+
 PUB FIFOTXBasePtr(txp)
 ' Set start of the transmit buffer within the transceiver's FIFO
 '   Valid values: 0..255
@@ -451,6 +460,11 @@ PUB IntMask(mask): curr_mask | tmp[2]
         other:
             return _intmask
 
+PUB LastPacketBytes{}: nr_bytes
+' Return number of payload bytes of last packet received
+    rxbuffstatus{}
+    return _lastrx_paylen
+
 PUB Modulation(mode)
 ' Set OTA modulation
 '   Valid values:
@@ -612,7 +626,8 @@ PUB Reset
     time.msleep(20)
 
 PUB RSSI{}: curr_rssi
-
+' Received Signal Strength Indicator
+'   Returns: RSSI in dBm
     cmd(core#GET_RSSIINST, 0, 0, @curr_rssi, 1)
     return (-curr_rssi)/2
 
@@ -626,6 +641,15 @@ PUB RXBandwidth(bw): curr_bw
             _bw := bw
         other:
             return _bw
+
+PUB RXBuffStatus{}: stat
+' Receive buffer status
+'   Returns:
+'       LSB: length of last received packet
+'       MSB: FIFO address/offset of first received
+    cmd(core#GET_RXBUFFSTATUS, 0, 0, @stat, 2)
+    _lastrx_paylen := stat.byte[0]
+    _rxbuff_stptr := stat.byte[1]
 
 PUB RXMode{} | tmp
 ' Change chip state to receive
@@ -754,17 +778,17 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
             _status := spi.rd_byte{}
             outa[_CS] := 1
             return
-        $00, $03, $17, $C1, $C5, $D1, $D2, $D5: ' 0
+        $00, $03, $C1, $C5, $D1, $D2, $D5: ' 0
             outa[_CS] := 0
             spi.wr_byte(cmd_val)
             outa[_CS] := 1
             return
-        core#GET_PKTSTATUS:
-            cmd_pkt.byte[0] := core#GET_PKTSTATUS
+        core#GET_PKTSTATUS, core#GET_RXBUFFSTATUS:
+            cmd_pkt.byte[0] := cmd_val
             cmd_pkt.byte[1] := core#NOOP
             outa[_CS] := 0
             spi.wrblock_lsbf(@cmd_pkt, 2)
-            spi.rdblock_lsbf(ptr_resp, 5)
+            spi.rdblock_lsbf(ptr_resp, sz_resp)
             outa[_CS] := 1
             return
         core#GET_IRQSTATUS:
