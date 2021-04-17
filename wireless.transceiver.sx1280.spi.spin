@@ -72,9 +72,11 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _intmask, _modulation, _opmode
+    long _bw, _freq, _modulation, _opmode
     long _ramptime, _rate
     long _txpwr
+
+    word _intmask, _gpio1mask, _gpio2mask, _gpio3mask
 
     ' PACKETPARAMS (do not change order)
     byte _preamble_len, _syncwd_len, _syncwd_mode, _pktlencfg
@@ -277,6 +279,90 @@ PUB FIFOTXBasePtr(txp)
         other:
             return _txfifoptr
 
+PUB GPIO1(mask): curr_mask
+' Configure signal output on DIO1
+'   Valid values:
+'       Bit Desc.                           Valid when Modulation() is:
+'       15  Preamble detected               LORA, GFSK, BLE
+'       15  Adv. ranging done               RANGING
+'       14  RxTx Timeout                    All
+'       13  Channel act. detected           LORA
+'       12  Ch. act. check done             LORA
+'       11  Range request valid (slave)     RANGING
+'       10  Range timeout (master)          RANGING
+'       9   Range result valid (master)     RANGING
+'       8   Range req. discarded (slave)    LORA, RANGING
+'       7   Range resp. complete (slave)    RANGING
+'       6   CRC error                       GFSK, BLE, FLRC, LORA
+'       5   Header error                    LORA, RANGING
+'       4   Header valid                    LORA, RANGING
+'       3   Syncword error                  FLRC
+'       2   Syncword valid                  GFSK, BLE, FLRC
+'       1   RX complete                     GFSK, BLE, FLRC, LORA
+'       0   TX complete                     GFSK, BLE, FLRC, LORA
+'   Any other value returns the current (cached) setting
+    case mask
+        %0000_0000_0000_0000..%1111_1111_1111_1111:
+            _gpio1mask := mask
+        other:
+            return _gpio1mask
+
+PUB GPIO2(mask): curr_mask
+' Configure signal output on DIO2
+'   Valid values:
+'       Bit Desc.                           Valid when Modulation() is:
+'       15  Preamble detected               LORA, GFSK, BLE
+'       15  Adv. ranging done               RANGING
+'       14  RxTx Timeout                    All
+'       13  Channel act. detected           LORA
+'       12  Ch. act. check done             LORA
+'       11  Range request valid (slave)     RANGING
+'       10  Range timeout (master)          RANGING
+'       9   Range result valid (master)     RANGING
+'       8   Range req. discarded (slave)    LORA, RANGING
+'       7   Range resp. complete (slave)    RANGING
+'       6   CRC error                       GFSK, BLE, FLRC, LORA
+'       5   Header error                    LORA, RANGING
+'       4   Header valid                    LORA, RANGING
+'       3   Syncword error                  FLRC
+'       2   Syncword valid                  GFSK, BLE, FLRC
+'       1   RX complete                     GFSK, BLE, FLRC, LORA
+'       0   TX complete                     GFSK, BLE, FLRC, LORA
+'   Any other value returns the current (cached) setting
+    case mask
+        %0000_0000_0000_0000..%1111_1111_1111_1111:
+            _gpio2mask := mask
+        other:
+            return _gpio2mask
+
+PUB GPIO3(mask): curr_mask
+' Configure signal output on DIO3
+'   Valid values:
+'       Bit Desc.                           Valid when Modulation() is:
+'       15  Preamble detected               LORA, GFSK, BLE
+'       15  Adv. ranging done               RANGING
+'       14  RxTx Timeout                    All
+'       13  Channel act. detected           LORA
+'       12  Ch. act. check done             LORA
+'       11  Range request valid (slave)     RANGING
+'       10  Range timeout (master)          RANGING
+'       9   Range result valid (master)     RANGING
+'       8   Range req. discarded (slave)    LORA, RANGING
+'       7   Range resp. complete (slave)    RANGING
+'       6   CRC error                       GFSK, BLE, FLRC, LORA
+'       5   Header error                    LORA, RANGING
+'       4   Header valid                    LORA, RANGING
+'       3   Syncword error                  FLRC
+'       2   Syncword valid                  GFSK, BLE, FLRC
+'       1   RX complete                     GFSK, BLE, FLRC, LORA
+'       0   TX complete                     GFSK, BLE, FLRC, LORA
+'   Any other value returns the current (cached) setting
+    case mask
+        %0000_0000_0000_0000..%1111_1111_1111_1111:
+            _gpio3mask := mask
+        other:
+            return _gpio3mask
+
 PUB Idle{} | tmp
 ' Change transceiver to idle state
     tmp := 0                                    ' [b0]: Run on RC OSC (13MHz)
@@ -302,7 +388,7 @@ PUB IntClear(mask)
 '       3   Syncword error                  FLRC
 '       2   Syncword valid                  GFSK, BLE, FLRC
 '       1   RX complete                     GFSK, BLE, FLRC, LORA
-'       0   TX complete                     GFSK, BLE< FLRC, LORA
+'       0   TX complete                     GFSK, BLE, FLRC, LORA
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
             cmd(core#CLR_IRQSTATUS, @mask, 2, 0, 0)
@@ -329,7 +415,7 @@ PUB Interrupt{}: int_src
 '       3   Syncword error                  FLRC
 '       2   Syncword valid                  GFSK, BLE, FLRC
 '       1   RX complete                     GFSK, BLE, FLRC, LORA
-'       0   TX complete                     GFSK, BLE< FLRC, LORA
+'       0   TX complete                     GFSK, BLE, FLRC, LORA
     cmd(core#GET_IRQSTATUS, 0, 0, @int_src, 2)
 
 PUB IntMask(mask): curr_mask | tmp[2]
@@ -352,14 +438,15 @@ PUB IntMask(mask): curr_mask | tmp[2]
 '       3   Syncword error                  FLRC
 '       2   Syncword valid                  GFSK, BLE, FLRC
 '       1   RX complete                     GFSK, BLE, FLRC, LORA
-'       0   TX complete                     GFSK, BLE< FLRC, LORA
+'       0   TX complete                     GFSK, BLE, FLRC, LORA
     longfill(@tmp, 0, 2)
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
             _intmask := mask
-            tmp.byte[0] := mask.byte[1]
-            tmp.byte[1] := mask.byte[0]
-            'tmp.byte[2..7] := 0 xxx hardcoded (DIO config)
+            tmp.word[3] := mask
+            tmp.word[2] := _gpio1mask
+            tmp.word[1] := _gpio2mask
+            tmp.word[0] := _gpio3mask
             cmd(core#SET_DIOIRQPARAMS, @tmp, 8, 0, 0)
         other:
             return _intmask
@@ -712,6 +799,11 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
             outa[_CS] := 1
             return
         core#SET_DIOIRQPARAMS: ' 8
+            outa[_CS] := 0
+            spi.wr_byte(cmd_val)
+            spi.wrblock_msbf(ptr_params, 8)
+            outa[_CS] := 1
+            return
         other:
             return
 
