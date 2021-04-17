@@ -86,7 +86,7 @@ VAR
     byte _status, _pktstatus[5]
 
     ' SET_MODPARAMS
-    byte _modidx
+    byte _modidx, _mod_bwt
 
 OBJ
 
@@ -115,6 +115,21 @@ PUB Stop{}
 
     dira[_CS] := 0
     spi.deinit{}
+
+PUB BandwidthTime(bt): curr_bt
+' Set bandwidth-time product (BT)
+'   Valid values:
+'       0 (off)
+'       1_0 (1.0)
+'       0_5 (0.5)
+'   Any other value returns the current (cached) setting
+'   NOTE: Used when Modulation() == GFSK
+    case bt
+        0, 1_0, 0_5:
+            _mod_bwt := (lookdownz(bt: 0, 1_0, 0_5) << 4)
+        other:
+            curr_bt := _mod_bwt >> 4
+            return lookupz(curr_bt: 0, 1_0, 0_5)
 
 PUB Busy{}: isbusy
 ' Get device busy status
@@ -224,7 +239,7 @@ PUB DataRate(rate) | tmp
 
     _rate := rate
     tmp.byte[1] := _modidx
-    tmp.byte[2] := core#BT_0_5
+    tmp.byte[2] := _mod_bwt
     cmd(core#SET_MODPARAMS, @tmp, 3, 0, 0)
 
 PUB DataWhitening(state): curr_state
