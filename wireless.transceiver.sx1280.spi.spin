@@ -611,6 +611,11 @@ PUB Reset
     outa[_RESET] := 1
     time.msleep(20)
 
+PUB RSSI{}: curr_rssi
+
+    cmd(core#GET_RSSIINST, 0, 0, @curr_rssi, 1)
+    return (-curr_rssi)/2
+
 PUB RXBandwidth(bw): curr_bw
 ' Set transceiver bandwidth (DSB), in Hz
 '   Valid values: 300_000, 600_000, 1_200_000, 2_400_000
@@ -749,7 +754,7 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
             _status := spi.rd_byte{}
             outa[_CS] := 1
             return
-        $00, $03, $17, $1F, $C1, $C5, $D1, $D2, $D5: ' 0
+        $00, $03, $17, $C1, $C5, $D1, $D2, $D5: ' 0
             outa[_CS] := 0
             spi.wr_byte(cmd_val)
             outa[_CS] := 1
@@ -776,7 +781,15 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
             spi.wrblock_msbf(ptr_params, 2)
             outa[_CS] := 1
             return
-        $1B, $84, $80, $8A, $88, $96, $98, $9B, $9D, $9E, $A3: ' 1
+        core#GET_RSSIINST:
+            cmd_pkt.byte[0] := core#GET_RSSIINST
+            cmd_pkt.byte[1] := core#NOOP
+            outa[_CS] := 0
+            spi.wrblock_lsbf(@cmd_pkt, 2)
+            spi.rdblock_lsbf(ptr_resp, 1)
+            outa[_CS] := 1
+            return
+        $1B, $84, $80, $8A, $96, $98, $9B, $9D, $9E, $A3: ' 1
         $1A, $8E: ' 2
         core#SET_BUFF_BASEADDR:
             outa[_CS] := 0
