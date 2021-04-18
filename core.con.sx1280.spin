@@ -5,7 +5,7 @@
     Description: SX1280 low-level constants
     Copyright (c) 2021
     Started Feb 14, 2020
-    Updated Apr 12, 2021
+    Updated Apr 18, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -132,6 +132,14 @@ CON
 
 ' Registers
     FIRMWARE_MSB                = $0153
+
+    SF                          = $0925
+        SF5_6                   = $1E
+        SF7_8                   = $37
+        SF9TO12                 = $32
+
+    FREQERRCOMP                 = $093C
+
     SYNCWD1                     = $09CE 'MSB .. $09D2 (LSB)
     SYNCWD2                     = $09D3 'MSB .. $09D7 (LSB)
     SYNCWD3                     = $09D8 'MSB .. $09DC (LSB)
@@ -141,10 +149,25 @@ CON
     CRCINIT_MSB                 = $9C8
     CRCINIT_LSB                 = $9C9
 
+' -- Modulation/packet type-specific settings
 ' BLE 4.2
     BLE_4_2_BR_1_000_BW_1_2     = $45
     BLE_4_2_MOD_IND_0_5         = $01
     BLE_4_2_BT_0_5              = $20
+
+' LoRa
+'   SetPacketParams:
+    LORA_PBLE_LEN_MANT_DEF      = 6             ' preamble default:
+    LORA_PBLE_LEN_EXP_DEF       = 1             '   12 symbols
+
+    EXPLICIT_HEADER             = $00
+    IMPLICIT_HEADER             = $80
+
+    LORA_CRC_ENABLE             = $20
+    LORA_CRC_DISABLE            = $00
+
+    LORA_IQ_INVERTED            = $00
+    LORA_IQ_STD                 = $40
 
 PUB Null
 ' This is not a top-level object

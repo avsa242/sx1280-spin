@@ -84,6 +84,9 @@ VAR
     byte _preamble_len, _syncwd_len, _syncwd_mode, _pktlencfg
     byte _paylen, _crclen, _data_whiten
 
+    byte _lora_preamble, _lora_pktlencfg, _lora_paylen, _lora_crclen
+    byte _lora_iqswap
+
     ' GET_RXBUFFSTATUS
     byte _lastrx_paylen, _rxbuff_stptr
 
@@ -94,6 +97,7 @@ VAR
 
     ' SET_MODPARAMS
     byte _modidx, _mod_bwt
+    byte _lora_sf, _lora_bw, _lora_cr
 
 OBJ
 
@@ -139,6 +143,73 @@ PUB Preset_GFSK_125k_0p3BW{}
     payloadlencfg(PKTLEN_VAR)
     ramptime(20)
 
+PUB Preset_LoRa{}
+' LoRa presets
+'   12-symbol preamble
+'   variable-length packets
+'   CRC enabled
+'   I/Q standard
+    _lora_preamble := (core#LORA_PBLE_LEN_EXP_DEF << 4) | core#LORA_PBLE_LEN_MANT_DEF
+    _lora_pktlencfg := core#EXPLICIT_HEADER
+    _lora_crclen := core#LORA_CRC_ENABLE
+    _lora_iqswap := core#LORA_IQ_STD
+
+PUB Preset_DR0{}
+' Physical bitrate (Rb) 1200
+    preset_lora{}
+    spreadfactor(12)
+    rxbandwidth(812_500)
+    preamblelen(8)
+
+PUB Preset_DR1{}
+' Physical bitrate (Rb) 2100
+    preset_lora{}
+    spreadfactor(11)
+    rxbandwidth(812_500)
+    preamblelen(8)
+
+PUB Preset_DR2{}
+' Physical bitrate (Rb) 3900
+    preset_lora{}
+    spreadfactor(10)
+    rxbandwidth(812_500)
+    preamblelen(8)
+
+PUB Preset_DR3{}
+' Physical bitrate (Rb) 7100
+    preset_lora{}
+    spreadfactor(9)
+    rxbandwidth(812_500)
+    preamblelen(8)
+
+PUB Preset_DR4{}
+' Physical bitrate (Rb) 12_700
+    preset_lora{}
+    spreadfactor(8)
+    rxbandwidth(812_500)
+    preamblelen(8)
+
+PUB Preset_DR5{}
+' Physical bitrate (Rb) 22_200
+    preset_lora{}
+    spreadfactor(7)
+    rxbandwidth(812_500)
+    preamblelen(8)
+
+PUB Preset_DR6{}
+' Physical bitrate (Rb) 38_000
+    preset_lora{}
+    spreadfactor(6)
+    rxbandwidth(812_500)
+    preamblelen(12)
+
+PUB Preset_DR7{}
+' Physical bitrate (Rb) 63_000
+    preset_lora{}
+    spreadfactor(5)
+    rxbandwidth(812_500)
+    preamblelen(12)
+
 PUB BandwidthTime(bt): curr_bt
 ' Set bandwidth-time product (BT)
 '   Valid values:
@@ -171,25 +242,56 @@ PUB Carrierfreq(freq)
         other:
             return
 
+PUB CodeRate(rate): curr_rate
+' Set Error code rate
+'   Valid values:
+'                k/n
+'       $04_05 = 4/5
+'       $04_06 = 4/6
+'       $04_07 = 4/7
+'       $04_08 = 4/8
+'   Values with long-interleaving enabled:
+'       $14_05 = 4/5
+'       $14_06 = 4/6
+'       $14_08 = 4/8
+'   Any other value returns the current (cached) setting
+    case rate
+        $04_05..$04_08, $14_05, $14_06, $14_08:
+            rate := lookdown(rate: $04_05, $04_06, $04_07, $04_08, $14_05, $14_06, $14_08)
+            _lora_cr := rate
+        other:
+            curr_rate := _lora_cr
+            return lookup(rate: $04_05, $04_06, $04_07, $04_08, $14_05, $14_06, $14_08)
+
+    cmd(core#SET_MODPARAMS, @_lora_sf, 3, 0, 0) ' set 3 params: SF, BW, CR
+
 PUB CRCCheckEnabled(state): curr_state
 ' Enable CRC generation (TX) and checking (RX)
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
-    case ||(state)
-        0:
-            _crclen := 0
-        1:
-            ' is CRC length already set to something valid? (1 or 2 bytes)
-            ' if so, leave it as-is
-            ' if it's not enabled yet (0), enable it (set it to 1 byte)
-            ifnot lookdown(_crclen: $10, $20)
-                _crclen := $10
-        other:
-            ' are CRC checks enabled? (1 or 2)
-            ' if so, return TRUE
-            return (lookdown(_crclen: $10, $20) > 0)
-
-    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+    case modulation(-2)
+        GFSK:
+            case ||(state)
+                0:
+                    _crclen := 0
+                1:
+                    ' is CRC length already set to something valid? (1 or 2 bytes)
+                    ' if so, leave it as-is
+                    ' if it's not enabled yet (0), enable it (set it to 1 byte)
+                    ifnot lookdown(_crclen: $10, $20)
+                        _crclen := $10
+                other:
+                    ' are CRC checks enabled? (1 or 2)
+                    ' if so, return TRUE
+                    return (lookdown(_crclen: $10, $20) > 0)
+            cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+        LORA:
+            case ||(state)
+                0, 1:
+                    _lora_crclen := lookdown(||(state): $00, $20)
+                other:
+                    return (lookdown(_lora_crclen: $00, $20) == 1)
+            cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
 PUB CRCLength(length): curr_len
 ' Set CRC encoding scheme length, in bytes
@@ -478,6 +580,22 @@ PUB IntMask(mask): curr_mask | tmp[2]
         other:
             return _intmask
 
+PUB IQInverted(state): curr_state
+' Invert I/Q
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value returns the current (cached) setting
+'   NOTE: Only valid when Modulation() == LORA
+    case ||(state)
+        0, 1:
+            _lora_iqswap := lookdownz(||(state): core#LORA_IQ_STD, {
+}           core#LORA_IQ_INVERTED)
+        other:
+            curr_state := _lora_iqswap
+            return (lookupz(curr_state: core#LORA_IQ_STD, {
+}           core#LORA_IQ_INVERTED) == 1)
+
+    cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
+
 PUB LastPacketBytes{}: nr_bytes
 ' Return number of payload bytes of last packet received
     rxbuffstatus{}
@@ -572,13 +690,21 @@ PUB PayloadLen(length): curr_len
 ' Set packet length, in bytes
 '   Valid values: 0..255
 '   Any other value returns the current (cached) setting
-    case length
-        0..255:
-            _paylen := length
-        other:
-            return _paylen
-
-    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+    case modulation(-2)
+        GFSK:
+            case length
+                0..255:
+                    _paylen := length
+                other:
+                    return _paylen
+            cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+        LORA:
+            case length
+                0..255:
+                    _lora_paylen := length
+                other:
+                    return _lora_paylen
+            cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
 PUB PayloadLenCfg(mode): curr_mode
 ' Set packet length mode
@@ -586,13 +712,26 @@ PUB PayloadLenCfg(mode): curr_mode
 '       PKTLEN_FIXED ($00): Fixed-length packet/payload
 '       PKTLEN_VAR ($20): Variable-length packet/payload
 '   Any other value returns the current (cached) setting
-    case mode
-        PKTLEN_FIXED, PKTLEN_VAR:
-            _pktlencfg := mode
-        other:
-            return mode
-
-    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+    case modulation(-2)
+        GFSK:
+            case mode
+                PKTLEN_FIXED, PKTLEN_VAR:
+                    _pktlencfg := mode
+                other:
+                    return _pktlencfg
+            cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+        LORA:
+            case mode
+                PKTLEN_FIXED:
+                PKTLEN_VAR:
+                    mode := core#IMPLICIT_HEADER
+                other:
+                    if _lora_pktlencfg == core#IMPLICIT_HEADER
+                        return PKTLEN_VAR
+                    else
+                        return PKTLEN_FIXED
+            _lora_pktlencfg := mode
+            cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
 PUB PayloadReady{}: flag
 ' Flag indicating payload ready/received
@@ -606,18 +745,35 @@ PUB PayloadSent{}: flag
     packetstatus(@_pktstatus)
     return ((_pktstatus[3] & PSTAT_PAYLDSENT) <> 0)
 
-PUB PreambleLen(len): curr_len
+PUB PreambleLen(len): curr_len | mant, exp, len_calc
 ' Set preamble length, in bits (when Modulation() == GFSK)
 '   Valid values: 4, 8, 12, 16, 20, 24, 28, 32
 '   Any other value returns the current (cached) setting
-    case len
-        4, 8, 12, 16, 20, 24, 28, 32:
-            _preamble_len := lookdownz(len: 4, 8, 12, 16, 20, 24, 28, 32) << 4
-        other:
-            curr_len := _preamble_len >> 4
-            return lookupz(curr_len: 4, 8, 12, 16, 20, 24, 28, 32)
-
-    cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+    case modulation(-2)
+        GFSK:
+            case len
+                4, 8, 12, 16, 20, 24, 28, 32:
+                    _preamble_len := lookdownz(len: 4, 8, 12, 16, 20, 24, 28, 32) << 4
+                other:
+                    curr_len := _preamble_len >> 4
+                    return lookupz(curr_len: 4, 8, 12, 16, 20, 24, 28, 32)
+            cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
+        LORA:
+            case len
+                2..491_520:
+                    if (len // 2)
+                        return                  ' must be an even number
+                    mant := exp := 1
+                    ' find closest matching mantissa/exponent to pre. length
+                    repeat exp from 1 to 15
+                        repeat mant from 1 to 15
+                            len_calc := mant * (1 << exp)
+                            if len_calc => len
+                                quit
+                        if len_calc => len
+                            quit
+                    _lora_preamble := (exp << 4) | mant
+            cmd(core#SET_PKTPARAMS, @_preamble_len, 5, 0, 0)
 
 PUB RampTime(rtime): curr_rtime
 ' Set power amplifier rise/fall time of ramp up/down, in microseconds
@@ -651,14 +807,28 @@ PUB RSSI{}: curr_rssi
 
 PUB RXBandwidth(bw): curr_bw
 ' Set transceiver bandwidth (DSB), in Hz
-'   Valid values: 300_000, 600_000, 1_200_000, 2_400_000
+'   Valid values:
+'       Modulation()    Values
+'       GFSK            300_000, 600_000, 1_200_000, 2_400_000
+'       LORA            203_125, 406_250, 812_500, 1_625_000
 '   Any other value returns the current (cached) setting
 '   NOTE: Cached setting - commit to transceiver using DataRate()
-    case bw
-        300_000, 600_000, 1_200_000, 2_400_000:
-            _bw := bw
-        other:
-            return _bw
+    case modulation(-2)
+        GFSK:
+            case bw
+                300_000, 600_000, 1_200_000, 2_400_000:
+                    _bw := bw
+                other:
+                    return _bw
+        LORA:
+            case bw
+                203_125, 406_250, 812_500, 1_625_000:
+                    bw := lookdown(bw: 203_125, 406_250, 812_500, 1_625_000)
+                    _lora_bw := lookup(bw: $34, $26, $18, $0A)
+                other:
+                    curr_bw := lookdown(_lora_bw: $34, $26, $18, $0A)
+                    return lookup(curr_bw: 203_125, 406_250, 812_500, 1_625_000)
+            cmd(core#SET_MODPARAMS, @_lora_sf, 3, 0, 0)
 
 PUB RXBuffStatus{}: stat
 ' Receive buffer status
@@ -694,6 +864,26 @@ PUB Sleep{} | tmp
 ' Power down chip
     tmp := 0                                    '[b1..0]: RAM flushed in sleep
     cmd(core#SET_SLEEP, @tmp, 1, 0, 0)
+
+PUB SpreadFactor(sf): curr_sf | tmp
+' Set spreading factor
+'   Valid values: 5, 6, 7, 8, 9, 10, 11, 12
+'   Any other value returns the current (cached) setting
+    case sf
+        5, 6:
+            tmp := core#SF5_6
+        7, 8:
+            tmp := core#SF7_8
+        9..12:
+            tmp := core#SF9TO12
+        other:
+            return _lora_sf >> 4
+
+    _lora_sf := sf << 4
+    cmd(core#SET_MODPARAMS, @_lora_sf, 3, 0, 0) ' set 3 params: SF, BW, CR
+    writereg(core#SF, 1, @tmp)
+    tmp := 1
+    writereg(core#FREQERRCOMP, 1, @tmp)
 
 PUB StatusReg{}: stat
 ' Read status register
