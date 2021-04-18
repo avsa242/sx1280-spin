@@ -5,7 +5,7 @@
     Description: Driver for the SX1280 2.4GHz transceiver
     Copyright (c) 2021
     Started Feb 14, 2020
-    Updated Apr 17, 2021
+    Updated Apr 18, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -17,6 +17,8 @@ CON
     ' calc frequency resolution: (chip oscillator / 2^18)
     ' scale up to preserve precision, then round up as an int
     F_RES               = round((float(OSC) / float(TWO_18)) * 1000.0)
+
+    PAYLD_MAX           = 255                   ' max possible payload size
 
 ' Operating modes
     OPMODE_SLEEP        = 0
@@ -120,6 +122,22 @@ PUB Stop{}
 
     dira[_CS] := 0
     spi.deinit{}
+
+PUB Preset_GFSK_125k_0p3BW{}
+' GFSK modulation, 125kbps, 300kHz bandwidth
+' Modulation Index: 1.0, BT: 0.5
+' 5-byte syncword length, match stored syncword #1 only
+' Variable-length packet mode
+    modulation(GFSK)
+    modulationidx(1_00)
+    bandwidthtime(0_5)
+    rxbandwidth(300_000)
+    datarate(125_000)
+    syncwordlen(5)
+    syncwordmode(SWD1)
+    syncword(string($e7, $e6, $e5, $e4, $e3))
+    payloadlencfg(PKTLEN_VAR)
+    ramptime(20)
 
 PUB BandwidthTime(bt): curr_bt
 ' Set bandwidth-time product (BT)
@@ -249,7 +267,7 @@ PUB DataRate(rate) | tmp
 
 PUB DataWhitening(state): curr_state
 ' Enable data whitening
-'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Valid values: *TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
     case ||(state)
         0, 1:
@@ -533,7 +551,7 @@ PUB PacketStatus(ptr_stat)
 '   1       Signal to noise ratio       LORA, RANGING
 '   2       Errors                      BLE, GFSK, FLRC
 '       b6: Sync addr. detection status
-'       b5: RX payload length greather than expected
+'       b5: RX payload length greater than expected
 '       b4: CRC check status
 '       b3: Current packet RX/TX aborted
 '       b2: Header received
@@ -666,6 +684,7 @@ PUB RXPayload(nr_bytes, ptr_buff)
             outa[_CS] := 0
             spi.wr_byte(core#RD_BUFF)
             spi.wr_byte(0)                      ' offset within RX FIFO
+            spi.wr_byte(core#NOOP)
             spi.rdblock_lsbf(ptr_buff, nr_bytes)
             outa[_CS] := 1
         other:
