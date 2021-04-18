@@ -8,7 +8,16 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the SX1280 
 ## Salient Features
 
 * SPI connection at 1MHz (P1)
-* TBD
+* Over-the-air (OTA) data rate from 125kBaud to 2MBaud (GFSK)
+* GFSK (incl. BLE), FLRC, LoRa modulation
+* Set common RF parameters: Bandwidth, carrier freq, TX power (and ramp-up/down time)
+* Set number of preamble bits
+* Set function of SX1280's GPIO pins
+* Options for increasing transmission robustness: Data whitening, CRC (1 and 2 byte)
+* RSSI measurement
+* Set/read/clear interrupts
+* Payload received and sent flags
+* Test modes: Continuous preamble, CW, frequency synthesizer modes
 
 ## Requirements
 
@@ -20,7 +29,7 @@ P1/SPIN1:
 
 ## Compiler Compatibility
 
-* P1/SPIN1: OpenSpin (tested with 1.00.81)
+* P1/SPIN1: OpenSpin (tested with 1.00.81), FlexSpin (tested with 5.3.3-beta)
 * ~~P2/SPIN2: FlexSpin (tested with 5.3.3-beta)~~ _(not yet implemented)_
 * ~~BST~~ (incompatible - no preprocessor)
 * ~~Propeller Tool~~ (incompatible - no preprocessor)
@@ -29,7 +38,11 @@ P1/SPIN1:
 ## Limitations
 
 * Very early in development - may malfunction, or outright fail to build
+* Most settings that have modulation-specific settings availability are only implemented with GFSK in mind - others are planned/WIP
+* UART interface not implemented (not currently planned)
 
 ## TODO
 
+- [ ] Add better support for other modulation types
 - [ ] TBD
+
