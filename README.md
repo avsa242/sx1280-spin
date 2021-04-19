@@ -8,15 +8,15 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the SX1280 
 ## Salient Features
 
 * SPI connection at 1MHz (P1)
-* Over-the-air (OTA) data rate from 125kBaud to 2MBaud (GFSK)
+* Over-the-air (OTA) data rate from 125kBaud to 2MBaud (GFSK), 1.2kBaud to 63kBaud (LoRa)
 * GFSK (incl. BLE), FLRC, LoRa modulation
 * Set common RF parameters: Bandwidth, carrier freq, TX power (and ramp-up/down time)
-* Set number of preamble bits
+* Set number of preamble bits/symbols
 * Set function of SX1280's GPIO pins
 * Options for increasing transmission robustness: Data whitening, CRC (1 and 2 byte)
 * RSSI measurement
 * Set/read/clear interrupts
-* Payload received and sent flags
+* Payload received and sent flags (GFSK, BLE, FLRC only)
 * Test modes: Continuous preamble, CW, frequency synthesizer modes
 
 ## Requirements
