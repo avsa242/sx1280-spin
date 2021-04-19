@@ -18,6 +18,7 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the SX1280 
 * Set/read/clear interrupts
 * Payload received and sent flags (GFSK, BLE, FLRC only)
 * Test modes: Continuous preamble, CW, frequency synthesizer modes
+* Presets for common settings, data rates (LoRa DR0..7)
 
 ## Requirements
 
@@ -43,6 +44,7 @@ P1/SPIN1:
 
 ## TODO
 
-- [ ] Add better support for other modulation types
+- [x] Add basic LoRa support (enough to successfully transmit/receive)
+- [ ] Add more presets for GFSK
 - [ ] TBD
 
