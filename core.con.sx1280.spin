@@ -150,12 +150,45 @@ CON
     CRCINIT_LSB                 = $9C9
 
 ' -- Modulation/packet type-specific settings
+' All
+    RADIO_RAMP_02_US            = $00
+    RADIO_RAMP_04_US            = $20
+    RADIO_RAMP_06_US            = $40
+    RADIO_RAMP_08_US            = $60
+    RADIO_RAMP_10_US            = $80
+    RADIO_RAMP_12_US            = $A0
+    RADIO_RAMP_16_US            = $C0
+    RADIO_RAMP_20_US            = $E0
+
 ' BLE 4.2
     BLE_4_2_BR_1_000_BW_1_2     = $45
     BLE_4_2_MOD_IND_0_5         = $01
     BLE_4_2_BT_0_5              = $20
 
 ' LoRa
+'   SetModulationParams:
+    LORA_SF_5                   = $50
+    LORA_SF_6                   = $60
+    LORA_SF_7                   = $70
+    LORA_SF_8                   = $80
+    LORA_SF_9                   = $90
+    LORA_SF_10                  = $A0
+    LORA_SF_11                  = $B0
+    LORA_SF_12                  = $C0
+
+    LORA_BW_1600                = $0A
+    LORA_BW_800                 = $18
+    LORA_BW_400                 = $26
+    LORA_BW_200                 = $34
+
+    LORA_CR_4_5                 = $01
+    LORA_CR_4_6                 = $02
+    LORA_CR_4_7                 = $03
+    LORA_CR_4_8                 = $04
+    LORA_CR_LI_4_5              = $05
+    LORA_CR_LI_4_6              = $06
+    LORA_CR_LI_4_8              = $07
+
 '   SetPacketParams:
     LORA_PBLE_LEN_MANT_DEF      = 6             ' preamble default:
     LORA_PBLE_LEN_EXP_DEF       = 1             '   12 symbols

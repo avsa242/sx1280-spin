@@ -120,11 +120,15 @@ PUB Startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, RESET_PIN, BUSY_PIN): status
             dira[_CS] := 1
             dira[_BUSY] := 0
             return
-    return FALSE                                                'If we got here, something went wrong
+    ' if this point is reached, something above failed
+    ' Double check I/O pin assignments, connections, power
+    ' Lastly - make sure you have at least one free core/cog
+    return FALSE
 
 PUB Stop{}
 
     dira[_CS] := 0
+    dira[_RESET] := 0
     spi.deinit{}
 
 PUB Preset_GFSK_125k_0p3BW{}
@@ -145,56 +149,64 @@ PUB Preset_GFSK_125k_0p3BW{}
 
 PUB Preset_LoRa{}
 ' LoRa presets
+'   Spread factor 12
+'   BW 812.5kHz
+'   Code rate 4/5
 '   12-symbol preamble
 '   variable-length packets
 '   CRC enabled
 '   I/Q standard
+    _lora_sf := core#LORA_SF_12
+    _lora_bw := core#LORA_BW_800
+    _lora_cr := core#LORA_CR_4_5
     _lora_preamble := (core#LORA_PBLE_LEN_EXP_DEF << 4) | core#LORA_PBLE_LEN_MANT_DEF
+    _lora_paylen := 255
     _lora_pktlencfg := core#EXPLICIT_HEADER
     _lora_crclen := core#LORA_CRC_ENABLE
     _lora_iqswap := core#LORA_IQ_STD
+    _ramptime := core#RADIO_RAMP_20_US
 
 PUB Preset_DR0{}
 ' Physical bitrate (Rb) 1200
     preset_lora{}
     spreadfactor(12)
     rxbandwidth(812_500)
-    preamblelen(8)
+    preamblelen(12)
 
 PUB Preset_DR1{}
 ' Physical bitrate (Rb) 2100
     preset_lora{}
     spreadfactor(11)
     rxbandwidth(812_500)
-    preamblelen(8)
+    preamblelen(12)
 
 PUB Preset_DR2{}
 ' Physical bitrate (Rb) 3900
     preset_lora{}
     spreadfactor(10)
     rxbandwidth(812_500)
-    preamblelen(8)
+    preamblelen(12)
 
 PUB Preset_DR3{}
 ' Physical bitrate (Rb) 7100
     preset_lora{}
     spreadfactor(9)
     rxbandwidth(812_500)
-    preamblelen(8)
+    preamblelen(12)
 
 PUB Preset_DR4{}
 ' Physical bitrate (Rb) 12_700
     preset_lora{}
     spreadfactor(8)
     rxbandwidth(812_500)
-    preamblelen(8)
+    preamblelen(12)
 
 PUB Preset_DR5{}
 ' Physical bitrate (Rb) 22_200
     preset_lora{}
     spreadfactor(7)
     rxbandwidth(812_500)
-    preamblelen(8)
+    preamblelen(12)
 
 PUB Preset_DR6{}
 ' Physical bitrate (Rb) 38_000
@@ -618,7 +630,7 @@ PUB Modulation(mode)
             idle{}                              ' must be set in idle/standby
             cmd(core#SET_PKTTYPE, @mode, 1, 0, 0)
         other:
-            return
+            return _modulation
 
 PUB ModulationIdx(idx): curr_idx
 ' Set modulation index
@@ -736,12 +748,18 @@ PUB PayloadLenCfg(mode): curr_mode
 PUB PayloadReady{}: flag
 ' Flag indicating payload ready/received
 '   Returns: TRUE (-1) or FALSE (0)
+'   NOTE: Applies when Modulation() == BLE, GFSK, FLRC
+'   When Modulation() == LORA, set IntMask() to RXDONE and check
+'       Interrupt() & RXDONE
     packetstatus(@_pktstatus)
     return ((_pktstatus[2] & PSTAT_PAYLDRDY) <> 0)
 
 PUB PayloadSent{}: flag
 ' Flag indicating payload sent
 '   Returns: TRUE (-1) or FALSE (0)
+'   NOTE: Applies when Modulation() == BLE, GFSK, FLRC
+'   When Modulation() == LORA, set IntMask() to TXDONE and check
+'       Interrupt() & TXDONE
     packetstatus(@_pktstatus)
     return ((_pktstatus[3] & PSTAT_PAYLDSENT) <> 0)
 
@@ -773,7 +791,11 @@ PUB PreambleLen(len): curr_len | mant, exp, len_calc
                         if len_calc => len
                             quit
                     _lora_preamble := (exp << 4) | mant
-            cmd(core#SET_PKTPARAMS, @_preamble_len, 5, 0, 0)
+                other:
+                    exp := (_lora_preamble >> 4) & $f
+                    mant := _lora_preamble & $f
+                    return mant * (1 << exp)
+            cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
 PUB RampTime(rtime): curr_rtime
 ' Set power amplifier rise/fall time of ramp up/down, in microseconds
@@ -1041,7 +1063,7 @@ PRI cmd(cmd_val, ptr_params, nr_params, ptr_resp, sz_resp) | cmd_pkt
         core#SET_PKTPARAMS: ' 7
             outa[_CS] := 0
             spi.wr_byte(cmd_val)
-            spi.wrblock_lsbf(ptr_params, 7)
+            spi.wrblock_lsbf(ptr_params, nr_params)
             outa[_CS] := 1
             return
         core#SET_DIOIRQPARAMS: ' 8
@@ -1078,7 +1100,7 @@ PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
 PRI writeReg(reg_nr, nr_bytes, ptr_buff) | i
 ' Write nr_bytes to register 'reg' stored at ptr_buff
     case reg_nr
-        core#SYNCWD1:
+        core#SYNCWD1, core#SF, core#FREQERRCOMP:
         other:
             return
 
