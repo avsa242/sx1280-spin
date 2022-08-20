@@ -4,9 +4,9 @@
     Author: Jesse Burt
     Description: Simple TX demo for the SX1280 driver
         (GFSK modulation)
-    Copyright (c) 2021
+    Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Apr 18, 2021
+    Updated Aug 20, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -34,8 +34,9 @@ OBJ
     cfg   : "core.con.boardcfg.flip"
     ser   : "com.serial.terminal.ansi"
     time  : "time"
-    sx1280: "wireless.transceiver.sx1280.spi"
-    sf    : "string.format"
+    sx1280: "wireless.transceiver.sx1280"
+    str   : "string"
+
 VAR
 
     byte _txbuff[PAYLD_MAX]
@@ -44,10 +45,24 @@ PUB Main{} | count, sz, user_str
 
     setup{}
 
+'    sx1280.preset_gfsk_125k_0p3bw
+'    sx1280.datarate(250_000)
+'    repeat sz from 80_000 to 250_000 step 10_000
+'        sx1280.freqdeviation(sz)
+'        ser.printf2(string("%d   --   %d\n"), sz, sx1280.modulationidx(-2))
+'    repeat
     ' user-modifiable string to send over the air
-    user_str := string("This is message # $%x")
+    user_str := string("This is message # $%4.4x")
 
     sx1280.preset_gfsk_125k_0p3bw{}             ' GFSK, 125kbps, 300kHz BW
+    sx1280.datarate(250_000)
+    sx1280.rxbandwidth(300_000)
+'    sx1280.freqdeviation(125_000)
+    sx1280.modulationidx(3_00)
+    ser.dec(sx1280.modulationidx(-2))
+    sx1280.bandwidthtime(0)
+    sx1280.datarate(250_000)
+'    repeat
     sx1280.carrierfreq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
     sx1280.txpower(-18)                         ' -18..13 dBm
@@ -58,7 +73,7 @@ PUB Main{} | count, sz, user_str
     count := 0
     repeat
         bytefill(@_txbuff, 0, 255)              ' clear the payload buffer
-        sf.sprintf1(@_txbuff, user_str, count++)' copy user str w/counter to it
+        str.sprintf1(@_txbuff, user_str, count++)' copy user str w/counter to it
         sz := strsize(@_txbuff)                 ' get the final size
         sx1280.payloadlen(sz)
 
@@ -89,22 +104,21 @@ PUB Setup{}
 
 DAT
 {
-    --------------------------------------------------------------------------------------------------------
-    TERMS OF USE: MIT License
+Copyright 2022 Jesse Burt
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
-    associated documentation files (the "Software"), to deal in the Software without restriction, including
-    without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
-    following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all copies or substantial
-    portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
-    LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-    --------------------------------------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
+

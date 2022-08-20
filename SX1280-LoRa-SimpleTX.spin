@@ -34,8 +34,8 @@ OBJ
     cfg   : "core.con.boardcfg.flip"
     ser   : "com.serial.terminal.ansi"
     time  : "time"
-    sx1280: "wireless.transceiver.sx1280.spi"
-    sf    : "string.format"
+    sx1280: "wireless.transceiver.sx1280"
+    str   : "string"
 
 VAR
 
@@ -46,7 +46,7 @@ PUB Main{} | count, sz, user_str
     setup{}
 
     ' user-modifiable string to send over the air
-    user_str := string("This is message # $%x")
+    user_str := string("This is message # $%04.4x")
 
     sx1280.modulation(sx1280#LORA)
     sx1280.carrierfreq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
@@ -60,7 +60,7 @@ PUB Main{} | count, sz, user_str
     count := 0
     repeat
         bytefill(@_txbuff, 0, 255)              ' clear the payload buffer
-        sf.sprintf1(@_txbuff, user_str, count++)' copy user str w/counter to it
+        str.sprintf1(@_txbuff, user_str, count++)' copy user str w/counter to it
         sz := strsize(@_txbuff)                 ' get the final size
         sx1280.payloadlen(sz)
 
@@ -85,29 +85,26 @@ PUB Setup{}
         ser.strln(string("SX1280 driver started"))
     else
         ser.strln(string("SX1280 driver failed to start - halting"))
-        time.msleep(5)
-        ser.stop
         repeat
 
 
 DAT
 {
-    --------------------------------------------------------------------------------------------------------
-    TERMS OF USE: MIT License
+Copyright 2022 Jesse Burt
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
-    associated documentation files (the "Software"), to deal in the Software without restriction, including
-    without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
-    following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all copies or substantial
-    portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
-    LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-    --------------------------------------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
+

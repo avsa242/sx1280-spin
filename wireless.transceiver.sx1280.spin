@@ -1,6 +1,6 @@
 {
     --------------------------------------------
-    Filename: wireless.transceiver.sx1280.spi.spin
+    Filename: wireless.transceiver.sx1280.spin
     Author: Jesse Burt
     Description: Driver for the SX1280 2.4GHz transceiver
     Copyright (c) 2021
@@ -372,7 +372,7 @@ PUB DataRate(rate) | tmp
         125_000:
             tmp.byte[0] := core#GFSK_BLE_BR_0_125_BW_0_3
         other:
-            return
+            return _rate
 
     _rate := rate
     tmp.byte[1] := _modidx
@@ -419,6 +419,22 @@ PUB FIFOTXBasePtr(txp)
             cmd(core#SET_BUFF_BASEADDR, @_txfifoptr, 2, 0, 0)
         other:
             return _txfifoptr
+
+PUB FreqDeviation(freq): curr_freq | modidx
+' Set frequency deviation, in Hz
+'   Valid values: 62_500..1_000_000
+'   Any other value returns the current (cached) setting
+'   NOTE: Valid only when Modulation() == GFSK, BLE
+    case modulation(-2)
+        GFSK, BLE:
+            case freq
+                62_500..1_000_000:
+                    modidx := (8 * ((freq * 1_00) / _rate)) - 1_00
+                    ifnot lookdown(modidx: 0_35..4_00)
+                        return                  ' mod idx > 4.00 is invalid
+                    modulationidx(modidx)
+        other:
+            return
 
 PUB GPIO1(mask): curr_mask
 ' Configure signal output on DIO1
@@ -635,7 +651,7 @@ PUB Modulation(mode)
 PUB ModulationIdx(idx): curr_idx
 ' Set modulation index
 '   Valid values:
-'       0_35 (=0.35), 0_5..4_00 (=4.00), in increments of 0_25
+'       0_35 (=0.35), 0_50..4_00 (=4.00), in increments of 0_25
 '   Any other value returns the current (cached) setting
 '   NOTE: For use when Modulation() == GFSK
 '   NOTE: Cached setting - commit to transceiver using DataRate()
@@ -1112,22 +1128,21 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | i
 
 DAT
 {
-    --------------------------------------------------------------------------------------------------------
-    TERMS OF USE: MIT License
+Copyright 2022 Jesse Burt
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
-    associated documentation files (the "Software"), to deal in the Software without restriction, including
-    without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
-    following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all copies or substantial
-    portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
-    LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-    --------------------------------------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
+

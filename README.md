@@ -30,21 +30,20 @@ P1/SPIN1:
 
 ## Compiler Compatibility
 
-* P1/SPIN1: OpenSpin (tested with 1.00.81), FlexSpin (tested with 5.3.3-beta)
-* ~~P2/SPIN2: FlexSpin (tested with 5.3.3-beta)~~ _(not yet implemented)_
-* ~~BST~~ (incompatible - no preprocessor)
-* ~~Propeller Tool~~ (incompatible - no preprocessor)
-* ~~PNut~~ (incompatible - no preprocessor)
+| Processor | Language | Compiler               | Backend     | Status                |
+|-----------|----------|------------------------|-------------|-----------------------|
+| P1        | SPIN1    | FlexSpin (5.9.14-beta) | Bytecode    | OK                    |
+| P1        | SPIN1    | FlexSpin (5.9.14-beta) | Native code | OK                    |
+| P1        | SPIN1    | OpenSpin (1.00.81)     | Bytecode    | Untested (deprecated) |
+| P2        | SPIN2    | FlexSpin (5.9.14-beta) | NuCode      | Not yet implemented   |
+| P2        | SPIN2    | FlexSpin (5.9.14-beta) | Native code | Not yet implemented   |
+| P1        | SPIN1    | Brad's Spin Tool (any) | Bytecode    | Unsupported           |
+| P1, P2    | SPIN1, 2 | Propeller Tool (any)   | Bytecode    | Unsupported           |
+| P1, P2    | SPIN1, 2 | PNut (any)             | Bytecode    | Unsupported           |
 
 ## Limitations
 
 * Very early in development - may malfunction, or outright fail to build
 * Most settings that have modulation-specific settings availability are only implemented with GFSK in mind - others are planned/WIP
 * UART interface not implemented (not currently planned)
-
-## TODO
-
-- [x] Add basic LoRa support (enough to successfully transmit/receive)
-- [ ] Add more presets for GFSK
-- [ ] TBD
 
