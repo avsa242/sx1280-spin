@@ -5,7 +5,7 @@
     Description: Driver for the SX1280 2.4GHz transceiver
     Copyright (c) 2022
     Started Feb 14, 2020
-    Updated Sep 19, 2022
+    Updated Oct 9, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -74,8 +74,8 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _modulation, _opmode
-    long _ramptime, _rate
+    long _bw, _freq, _rf_modulation, _opmode
+    long _pa_ramp_time, _rate
     long _txpwr
 
     word _intmask, _gpio1mask, _gpio2mask, _gpio3mask
@@ -112,14 +112,14 @@ PUB null{}
 PUB startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, RESET_PIN, BUSY_PIN): status
 ' Start using custom I/O settings
     if (status := spi.init(SCK_PIN, MOSI_PIN, MISO_PIN, core#SPI_MODE))
-            _CS := CS_PIN
-            _RESET := RESET_PIN
-            _BUSY := BUSY_PIN
-            reset{}
-            outa[_CS] := 1
-            dira[_CS] := 1
-            dira[_BUSY] := 0
-            return
+        _CS := CS_PIN
+        _RESET := RESET_PIN
+        _BUSY := BUSY_PIN
+        reset{}
+        outa[_CS] := 1
+        dira[_CS] := 1
+        dira[_BUSY] := 0
+        return
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
     ' Lastly - make sure you have at least one free core/cog
@@ -132,20 +132,20 @@ PUB stop{}
     spi.deinit{}
 
 PUB preset_gfsk_125k_0p3bw{}
-' GFSK modulation, 125kbps, 300kHz bandwidth
+' GFSK rf_modulation, 125kbps, 300kHz bandwidth
 ' Modulation Index: 1.0, BT: 0.5
-' 5-byte syncword length, match stored syncword #1 only
+' 5-byte syncwd length, match stored syncwd #1 only
 ' Variable-length packet mode
-    modulation(GFSK)
-    modulationidx(1_00)
-    bandwidthtime(0_5)
-    rxbandwidth(300_000)
-    datarate(125_000)
-    syncwordlen(5)
-    syncwordmode(SWD1)
-    syncword(string($e7, $e6, $e5, $e4, $e3))
-    payloadlencfg(PKTLEN_VAR)
-    ramptime(20)
+    rf_modulation(GFSK)
+    rf_mod_idx(1_00)
+    bt(0_5)
+    rf_rx_bw(300_000)
+    rf_data_rate(125_000)
+    syncwd_len(5)
+    syncwd_mode(SWD1)
+    syncwd(string($e7, $e6, $e5, $e4, $e3))
+    payld_len_cfg(PKTLEN_VAR)
+    pa_ramp_time(20)
 
 PUB preset_lora{}
 ' LoRa presets
@@ -164,65 +164,65 @@ PUB preset_lora{}
     _lora_pktlencfg := core#EXPLICIT_HEADER
     _lora_crclen := core#LORA_CRC_ENABLE
     _lora_iqswap := core#LORA_IQ_STD
-    _ramptime := core#RADIO_RAMP_20_US
+    _pa_ramp_time := core#RADIO_RAMP_20_US
 
 PUB preset_dr0{}
 ' Physical bitrate (Rb) 1200
     preset_lora{}
-    spreadfactor(12)
-    rxbandwidth(812_500)
-    preamblelen(12)
+    spread_fact(12)
+    rf_rx_bw(812_500)
+    preamble_len(12)
 
 PUB preset_dr1{}
 ' Physical bitrate (Rb) 2100
     preset_lora{}
-    spreadfactor(11)
-    rxbandwidth(812_500)
-    preamblelen(12)
+    spread_fact(11)
+    rf_rx_bw(812_500)
+    preamble_len(12)
 
 PUB preset_dr2{}
 ' Physical bitrate (Rb) 3900
     preset_lora{}
-    spreadfactor(10)
-    rxbandwidth(812_500)
-    preamblelen(12)
+    spread_fact(10)
+    rf_rx_bw(812_500)
+    preamble_len(12)
 
 PUB preset_dr3{}
 ' Physical bitrate (Rb) 7100
     preset_lora{}
-    spreadfactor(9)
-    rxbandwidth(812_500)
-    preamblelen(12)
+    spread_fact(9)
+    rf_rx_bw(812_500)
+    preamble_len(12)
 
 PUB preset_dr4{}
 ' Physical bitrate (Rb) 12_700
     preset_lora{}
-    spreadfactor(8)
-    rxbandwidth(812_500)
-    preamblelen(12)
+    spread_fact(8)
+    rf_rx_bw(812_500)
+    preamble_len(12)
 
 PUB preset_dr5{}
 ' Physical bitrate (Rb) 22_200
     preset_lora{}
-    spreadfactor(7)
-    rxbandwidth(812_500)
-    preamblelen(12)
+    spread_fact(7)
+    rf_rx_bw(812_500)
+    preamble_len(12)
 
 PUB preset_dr6{}
 ' Physical bitrate (Rb) 38_000
     preset_lora{}
-    spreadfactor(6)
-    rxbandwidth(812_500)
-    preamblelen(12)
+    spread_fact(6)
+    rf_rx_bw(812_500)
+    preamble_len(12)
 
 PUB preset_dr7{}
 ' Physical bitrate (Rb) 63_000
     preset_lora{}
-    spreadfactor(5)
-    rxbandwidth(812_500)
-    preamblelen(12)
+    spread_fact(5)
+    rf_rx_bw(812_500)
+    preamble_len(12)
 
-PUB bandwidthtime(bt): curr_bt
+PUB bt(b_t): curr_bt
 ' Set bandwidth-time product (BT)
 '   Valid values:
 '       0 (off)
@@ -230,9 +230,9 @@ PUB bandwidthtime(bt): curr_bt
 '       0_5 (0.5)
 '   Any other value returns the current (cached) setting
 '   NOTE: Used when Modulation() == GFSK
-    case bt
+    case b_t
         0, 1_0, 0_5:
-            _mod_bwt := (lookdownz(bt: 0, 1_0, 0_5) << 4)
+            _mod_bwt := (lookdownz(b_t: 0, 1_0, 0_5) << 4)
         other:
             curr_bt := _mod_bwt >> 4
             return lookupz(curr_bt: 0, 1_0, 0_5)
@@ -242,7 +242,7 @@ PUB busy{}: isbusy
 '   Returns: TRUE (-1) or FALSE (0)
     return (ina[_BUSY] == 1)
 
-PUB carrierfreq(freq)
+PUB carrier_freq(freq)
 ' Set carrier frequency, in kHz
 '   Valid values: 2_400_000..2_500_000
 '   Any other value is ignored
@@ -254,7 +254,7 @@ PUB carrierfreq(freq)
         other:
             return
 
-PUB coderate(rate): curr_rate
+PUB code_rate(rate): curr_rate
 ' Set Error code rate
 '   Valid values:
 '                k/n
@@ -277,11 +277,11 @@ PUB coderate(rate): curr_rate
 
     cmd(core#SET_MODPARAMS, @_lora_sf, 3, 0, 0) ' set 3 params: SF, BW, CR
 
-PUB crccheckenabled(state): curr_state
+PUB crc_check_ena(state): curr_state
 ' Enable CRC generation (TX) and checking (RX)
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
-    case modulation(-2)
+    case rf_modulation(-2)
         GFSK:
             case ||(state)
                 0:
@@ -305,7 +305,7 @@ PUB crccheckenabled(state): curr_state
                     return (lookdown(_lora_crclen: $00, $20) == 1)
             cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
-PUB crclength(length): curr_len
+PUB crc_len(length): curr_len
 ' Set CRC encoding scheme length, in bytes
 '   Valid values: 0 (no CRC), 1, 2
 '   Any other value returns the current (cached) setting
@@ -317,13 +317,13 @@ PUB crclength(length): curr_len
 
     cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
-PUB datarate(rate) | tmp
+PUB data_rate(rate) | tmp
 ' Set data rate, in bps
 '   Valid values:
 '       GFSK/BLE:
 '       125_000, 250_000, 400_000, 500_000, 800_000, 1_000_000,
 '       1_600_000, 2_000_000
-'   NOTE: Bandwidth is set using RXBandwidth()
+'   NOTE: Bandwidth is set using rx_band()
     case rate
         2_000_000:
             tmp.byte[0] := core#GFSK_BLE_BR_2_000_BW_2_4
@@ -379,7 +379,7 @@ PUB datarate(rate) | tmp
     tmp.byte[2] := _mod_bwt
     cmd(core#SET_MODPARAMS, @tmp, 3, 0, 0)
 
-PUB datawhitening(state): curr_state
+PUB data_whiten_ena(state): curr_state
 ' Enable data whitening
 '   Valid values: *TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
@@ -392,7 +392,7 @@ PUB datawhitening(state): curr_state
 
     cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
-PUB fiforxbaseptr(rxp)
+PUB fifo_rx_base_ptr(rxp)
 ' Set start of the receive buffer within the transceiver's FIFO
 '   Valid values: 0..255
 '   Any other value returns the current (cached) setting
@@ -403,13 +403,13 @@ PUB fiforxbaseptr(rxp)
         other:
             return _rxfifoptr
 
-PUB fiforxcurrentaddr{}: addr
+PUB fifo_rx_current_addr{}: addr
 ' Start address (in FIFO) of last packet received
 '   Returns: Starting address of last packet received
     rxbuffstatus{}
     return _lastrx_paylen
 
-PUB fifotxbaseptr(txp)
+PUB fifo_tx_base_ptr(txp)
 ' Set start of the transmit buffer within the transceiver's FIFO
 '   Valid values: 0..255
 '   Any other value returns the current (cached) setting
@@ -420,19 +420,19 @@ PUB fifotxbaseptr(txp)
         other:
             return _txfifoptr
 
-PUB freqdeviation(freq): curr_freq | modidx
+PUB freq_dev(freq): curr_freq | modidx
 ' Set frequency deviation, in Hz
 '   Valid values: 62_500..1_000_000
 '   Any other value returns the current (cached) setting
 '   NOTE: Valid only when Modulation() == GFSK, BLE
-    case modulation(-2)
+    case rf_modulation(-2)
         GFSK, BLE:
             case freq
                 62_500..1_000_000:
                     modidx := (8 * ((freq * 1_00) / _rate)) - 1_00
                     ifnot lookdown(modidx: 0_35..4_00)
                         return                  ' mod idx > 4.00 is invalid
-                    modulationidx(modidx)
+                    rf_mod_idx(modidx)
         other:
             return
 
@@ -525,7 +525,7 @@ PUB idle{} | tmp
     tmp := 0                                    ' [b0]: Run on RC OSC (13MHz)
     cmd(core#SET_STDBY, @tmp, 1, 0, 0)
 
-PUB intclear(mask)
+PUB int_clr(mask)
 ' Clear interrupts
 '   Valid values:
 '       Bit Desc.                           Valid when Modulation() is:
@@ -575,7 +575,7 @@ PUB interrupt{}: int_src
 '       0   TX complete                     GFSK, BLE, FLRC, LORA
     cmd(core#GET_IRQSTATUS, 0, 0, @int_src, 2)
 
-PUB intmask(mask): curr_mask | tmp[2]
+PUB int_mask(mask): curr_mask | tmp[2]
 ' Set interrupt mask
 '   Valid values:
 '       Bit Desc.                           Valid when Modulation() is:
@@ -608,7 +608,7 @@ PUB intmask(mask): curr_mask | tmp[2]
         other:
             return _intmask
 
-PUB iqinverted(state): curr_state
+PUB iq_inv(state): curr_state
 ' Invert I/Q
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
@@ -624,7 +624,7 @@ PUB iqinverted(state): curr_state
 
     cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
-PUB lastpacketbytes{}: nr_bytes
+PUB last_pkt_len{}: nr_bytes
 ' Return number of payload bytes of last packet received
     rxbuffstatus{}
     return _lastrx_paylen
@@ -639,17 +639,17 @@ PUB modulation(mode)
 '       BLE (4)
 '   NOTE: This setting must be configured before any others, as no
 '   existing settings are preserved when this setting is changed, and
-'   some settings have a modulation-specific meaning
+'   some settings have a rf_modulation-specific meaning
     case mode
         GFSK, LORA, RANGING, FLRC, BLE:
-            _modulation := mode
+            _rf_modulation := mode
             idle{}                              ' must be set in idle/standby
             cmd(core#SET_PKTTYPE, @mode, 1, 0, 0)
         other:
-            return _modulation
+            return _rf_modulation
 
-PUB modulationidx(idx): curr_idx
-' Set modulation index
+PUB mod_idx(idx): curr_idx
+' Set rf_modulation index
 '   Valid values:
 '       0_35 (=0.35), 0_50..4_00 (=4.00), in increments of 0_25
 '   Any other value returns the current (cached) setting
@@ -686,13 +686,13 @@ PUB opmode(mode): curr_mode
         other:
             return _opmode
 
-PUB packetstatus(ptr_stat)
+PUB pkt_status(ptr_stat)
 ' Get packet status
 '   Valid values:
 '       pointer to buffer (5-byte minimum)
 '   Byte    Desc                Valid when Modulation() is:
 '   0       RFU                         BLE, GFSK, FLRC
-'   0       RSSI when syncword detected LORA, RANGING
+'   0       RSSI when syncwd detected LORA, RANGING
 '   1       RSSI_SYNC                   BLE, GFSK, FLRC
 '   1       Signal to noise ratio       LORA, RANGING
 '   2       Errors                      BLE, GFSK, FLRC
@@ -714,11 +714,11 @@ PUB packetstatus(ptr_stat)
 '           %100: Sync address 3 detected
     cmd(core#GET_PKTSTATUS, 0, 0, ptr_stat, 5)
 
-PUB payloadlen(length): curr_len
+PUB payld_len(length): curr_len
 ' Set packet length, in bytes
 '   Valid values: 0..255
 '   Any other value returns the current (cached) setting
-    case modulation(-2)
+    case rf_modulation(-2)
         GFSK:
             case length
                 0..255:
@@ -734,13 +734,13 @@ PUB payloadlen(length): curr_len
                     return _lora_paylen
             cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
-PUB payloadlencfg(mode): curr_mode
+PUB payld_len_cfg(mode): curr_mode
 ' Set packet length mode
 '   Valid values:
 '       PKTLEN_FIXED ($00): Fixed-length packet/payload
 '       PKTLEN_VAR ($20): Variable-length packet/payload
 '   Any other value returns the current (cached) setting
-    case modulation(-2)
+    case rf_modulation(-2)
         GFSK:
             case mode
                 PKTLEN_FIXED, PKTLEN_VAR:
@@ -761,29 +761,29 @@ PUB payloadlencfg(mode): curr_mode
             _lora_pktlencfg := mode
             cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
-PUB payloadready{}: flag
+PUB payld_rdy{}: flag
 ' Flag indicating payload ready/received
 '   Returns: TRUE (-1) or FALSE (0)
 '   NOTE: Applies when Modulation() == BLE, GFSK, FLRC
 '   When Modulation() == LORA, set IntMask() to RXDONE and check
 '       Interrupt() & RXDONE
-    packetstatus(@_pktstatus)
+    pkt_status(@_pktstatus)
     return ((_pktstatus[2] & PSTAT_PAYLDRDY) <> 0)
 
-PUB payloadsent{}: flag
+PUB payld_sent{}: flag
 ' Flag indicating payload sent
 '   Returns: TRUE (-1) or FALSE (0)
 '   NOTE: Applies when Modulation() == BLE, GFSK, FLRC
 '   When Modulation() == LORA, set IntMask() to TXDONE and check
 '       Interrupt() & TXDONE
-    packetstatus(@_pktstatus)
+    pkt_status(@_pktstatus)
     return ((_pktstatus[3] & PSTAT_PAYLDSENT) <> 0)
 
-PUB preamblelen(len): curr_len | mant, exp, len_calc
+PUB preamble_len(len): curr_len | mant, exp, len_calc
 ' Set preamble length, in bits (when Modulation() == GFSK)
 '   Valid values: 4, 8, 12, 16, 20, 24, 28, 32
 '   Any other value returns the current (cached) setting
-    case modulation(-2)
+    case rf_modulation(-2)
         GFSK:
             case len
                 4, 8, 12, 16, 20, 24, 28, 32:
@@ -813,7 +813,7 @@ PUB preamblelen(len): curr_len | mant, exp, len_calc
                     return mant * (1 << exp)
             cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
-PUB ramptime(rtime): curr_rtime
+PUB pa_ramp_time(rtime): curr_rtime
 ' Set power amplifier rise/fall time of ramp up/down, in microseconds
 '   Valid values:
 '       *20, 16, 12, 10, 8, 6, 4, 2
@@ -821,10 +821,10 @@ PUB ramptime(rtime): curr_rtime
 '   NOTE: Cached setting - commit to transceiver using TXPower()
     case rtime
         20, 16, 12, 10, 8, 6, 4, 2:
-            _ramptime := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
-            _ramptime <<= 5
+            _pa_ramp_time := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
+            _pa_ramp_time <<= 5
         other:
-            curr_rtime := _ramptime >> 5
+            curr_rtime := _pa_ramp_time >> 5
             return lookupz(curr_rtime: 2, 4, 6, 8, 10, 12, 16, 20)
 
 PUB reset{}
@@ -843,7 +843,7 @@ PUB rssi{}: curr_rssi
     cmd(core#GET_RSSIINST, 0, 0, @curr_rssi, 1)
     return (-curr_rssi)/2
 
-PUB rxbandwidth(bw): curr_bw
+PUB rx_bw(bw): curr_bw
 ' Set transceiver bandwidth (DSB), in Hz
 '   Valid values:
 '       Modulation()    Values
@@ -851,7 +851,7 @@ PUB rxbandwidth(bw): curr_bw
 '       LORA            203_125, 406_250, 812_500, 1_625_000
 '   Any other value returns the current (cached) setting
 '   NOTE: Cached setting - commit to transceiver using DataRate()
-    case modulation(-2)
+    case rf_modulation(-2)
         GFSK:
             case bw
                 300_000, 600_000, 1_200_000, 2_400_000:
@@ -868,7 +868,7 @@ PUB rxbandwidth(bw): curr_bw
                     return lookup(curr_bw: 203_125, 406_250, 812_500, 1_625_000)
             cmd(core#SET_MODPARAMS, @_lora_sf, 3, 0, 0)
 
-PUB rxbuffstatus{}: stat
+PUB rx_buff_status{}: stat
 ' Receive buffer status
 '   Returns:
 '       LSB: length of last received packet
@@ -877,12 +877,12 @@ PUB rxbuffstatus{}: stat
     _lastrx_paylen := stat.byte[0]
     _rxbuff_stptr := stat.byte[1]
 
-PUB rxmode{} | tmp
+PUB rx_mode{} | tmp
 ' Change chip state to receive
-    tmp := 00_00_00                             ' no timeout - stay in RX until
+    tmp := 0                                    ' no timeout - stay in RX until
     cmd(core#SET_RX, @tmp, 3, 0, 0)             ' packet is received
 
-PUB rxpayload(nr_bytes, ptr_buff)
+PUB rx_payld(nr_bytes, ptr_buff)
 ' Receive data from FIFO
 '   Valid values:
 '       nr_bytes: 1..255
@@ -903,7 +903,7 @@ PUB sleep{} | tmp
     tmp := 0                                    '[b1..0]: RAM flushed in sleep
     cmd(core#SET_SLEEP, @tmp, 1, 0, 0)
 
-PUB spreadfactor(sf): curr_sf | tmp
+PUB spread_fact(sf): curr_sf | tmp
 ' Set spreading factor
 '   Valid values: 5, 6, 7, 8, 9, 10, 11, 12
 '   Any other value returns the current (cached) setting
@@ -923,18 +923,18 @@ PUB spreadfactor(sf): curr_sf | tmp
     tmp := 1
     writereg(core#FREQERRCOMP, 1, @tmp)
 
-PUB statusreg{}: stat
+PUB status_reg{}: stat
 ' Read status register
     cmd(core#GET_STATUS, 0, 0, 0, 0)
     return _status
 
-PUB syncword(ptr_sw)
+PUB syncwd(ptr_sw)
 ' Set syncword
 '   Valid values:
-'       pointer to 5-byte array containing syncword
+'       pointer to 5-byte array containing syncwd
     writereg(core#SYNCWD1, 5, ptr_sw)
 
-PUB syncwordlen(length): curr_len
+PUB syncwd_len(length): curr_len
 ' Set syncword length, in bytes
 '   Valid values: 1..5
 '   Any other value returns the current (cached) setting
@@ -946,7 +946,7 @@ PUB syncwordlen(length): curr_len
 
     cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
-PUB syncwordmode(mode): curr_mode
+PUB syncwd_mode(mode): curr_mode
 ' Set syncword mode/combination
 '   Valid values:
 '       Symbol              RXMode()            TXMode()
@@ -967,27 +967,27 @@ PUB syncwordmode(mode): curr_mode
 
     cmd(core#SET_PKTPARAMS, @_preamble_len, 7, 0, 0)
 
-PUB testcont_preamble{}
+PUB test_cont_preamble{}
 ' Enable continuous preamble transmit
 '   (intended for testing only)
     cmd(core#SET_TXCONT_PREAMBLE, 0, 0, 0, 0)
 
-PUB testcw{}
+PUB test_cw{}
 ' Enable continuous carrier transmit
 '   (intended for testing only)
     cmd(core#SET_TXCW, 0, 0, 0, 0)
 
-PUB testfs{}
+PUB test_fs{}
 ' Enable frequency synthesizer mode - lock PLL to carrier freq
 '   (intended for testing only)
     cmd(core#SET_FS, 0, 0, 0, 0)
 
-PUB txmode{} | tmp
+PUB tx_mode{} | tmp
 ' Change chip state to transmit
-    tmp := 00_00_00                             ' no timeout, stay in TX until
-    cmd(core#SET_TX, @tmp, 3, 0, 0)             ' packet is transmitted xxx hardcoded
+    tmp := 0                                    ' no timeout, stay in TX until
+    cmd(core#SET_TX, @tmp, 3, 0, 0)             ' packet is transmitted
 
-PUB txpayload(nr_bytes, ptr_buff)
+PUB tx_payld(nr_bytes, ptr_buff)
 ' Transmit data queued in FIFO
 '   Valid values:
 '       nr_bytes: 1..255
@@ -1002,14 +1002,14 @@ PUB txpayload(nr_bytes, ptr_buff)
         other:
             return
 
-PUB txpower(pwr): curr_pwr
+PUB tx_pwr(pwr): curr_pwr
 ' Set transmit mode RF output power, in dBm
 '   Valid values: -18..13
 '   Any other value returns the current (cached) setting
     case pwr
         -18..13:
             pwr.byte[0] := pwr+18
-            pwr.byte[1] := _ramptime
+            pwr.byte[1] := _pa_ramp_time
             cmd(core#SET_TXPARAMS, @pwr, 2, 0, 0)
             _txpwr := pwr.byte[0]
         other:
