@@ -4,9 +4,9 @@
     Author: Jesse Burt
     Description: Simple RX demo for the SX1280 driver
         (LoRa modulation)
-    Copyright (c) 2021
+    Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Apr 19, 2021
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -31,7 +31,7 @@ CON
 
 OBJ
 
-    cfg   : "core.con.boardcfg.flip"
+    cfg   : "boardcfg.flip"
     ser   : "com.serial.terminal.ansi"
     time  : "time"
     sx1280: "wireless.transceiver.sx1280"
@@ -44,29 +44,29 @@ PUB Main{} | sz
 
     setup{}
     sx1280.modulation(sx1280#LORA)
-    sx1280.carrierfreq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
+    sx1280.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
     sx1280.preset_dr7{}                         ' LoRa presets (DR0..7)
-    sx1280.payloadlen(255)                      ' max. accepted size (1..255)
+    sx1280.payld_len(255)                      ' max. accepted size (1..255)
 
-    sx1280.intmask(sx1280#RXDONE)               ' set 'receive done' interrupt
-    sx1280.intclear(sx1280#RXDONE)              ' and make sure it starts clear
+    sx1280.int_mask(sx1280#RXDONE)               ' set 'receive done' interrupt
+    sx1280.int_clr(sx1280#RXDONE)              ' and make sure it starts clear
 
     sz := 0
     repeat
-        sx1280.rxmode{}                         ' setup for reception
+        sx1280.rx_mode{}                         ' setup for reception
         ' wait for data to be received
         repeat until (sx1280.interrupt{} & sx1280#RXDONE)
         bytefill(@_rxbuff, 0, 255)              ' clear the payload buffer
-        sz := sx1280.lastpacketbytes{}          ' how many bytes was the data?
-        sx1280.rxpayload(sz, @_rxbuff)          ' receive that many into buffer
+        sz := sx1280.last_pkt_len{}          ' how many bytes was the data?
+        sx1280.rx_payld(sz, @_rxbuff)          ' receive that many into buffer
 
         ' show what was received
         ser.position(0, 3)
         ser.printf2(string("Received %d bytes: %s"), sz, @_rxbuff)
         ser.clearline{}
 
-        sx1280.intclear(sx1280#RXDONE)
+        sx1280.int_clr(sx1280#RXDONE)
 
 PUB Setup{}
 

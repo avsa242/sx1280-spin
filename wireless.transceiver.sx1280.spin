@@ -5,7 +5,7 @@
     Description: Driver for the SX1280 2.4GHz transceiver
     Copyright (c) 2022
     Started Feb 14, 2020
-    Updated Oct 9, 2022
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -74,7 +74,7 @@ CON
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _rf_modulation, _opmode
+    long _bw, _freq, _modulation, _opmode
     long _pa_ramp_time, _rate
     long _txpwr
 
@@ -101,7 +101,7 @@ VAR
 
 OBJ
 
-    spi : "com.spi.4w"
+    spi : "com.spi.1mhz"
     core: "core.con.sx1280"
     time: "time"
     u64 : "math.unsigned64"
@@ -132,15 +132,15 @@ PUB stop{}
     spi.deinit{}
 
 PUB preset_gfsk_125k_0p3bw{}
-' GFSK rf_modulation, 125kbps, 300kHz bandwidth
+' GFSK modulation, 125kbps, 300kHz bandwidth
 ' Modulation Index: 1.0, BT: 0.5
 ' 5-byte syncwd length, match stored syncwd #1 only
 ' Variable-length packet mode
-    rf_modulation(GFSK)
-    rf_mod_idx(1_00)
+    modulation(GFSK)
+    mod_idx(1_00)
     bt(0_5)
-    rf_rx_bw(300_000)
-    rf_data_rate(125_000)
+    rx_bw(300_000)
+    data_rate(125_000)
     syncwd_len(5)
     syncwd_mode(SWD1)
     syncwd(string($e7, $e6, $e5, $e4, $e3))
@@ -170,56 +170,56 @@ PUB preset_dr0{}
 ' Physical bitrate (Rb) 1200
     preset_lora{}
     spread_fact(12)
-    rf_rx_bw(812_500)
+    rx_bw(812_500)
     preamble_len(12)
 
 PUB preset_dr1{}
 ' Physical bitrate (Rb) 2100
     preset_lora{}
     spread_fact(11)
-    rf_rx_bw(812_500)
+    rx_bw(812_500)
     preamble_len(12)
 
 PUB preset_dr2{}
 ' Physical bitrate (Rb) 3900
     preset_lora{}
     spread_fact(10)
-    rf_rx_bw(812_500)
+    rx_bw(812_500)
     preamble_len(12)
 
 PUB preset_dr3{}
 ' Physical bitrate (Rb) 7100
     preset_lora{}
     spread_fact(9)
-    rf_rx_bw(812_500)
+    rx_bw(812_500)
     preamble_len(12)
 
 PUB preset_dr4{}
 ' Physical bitrate (Rb) 12_700
     preset_lora{}
     spread_fact(8)
-    rf_rx_bw(812_500)
+    rx_bw(812_500)
     preamble_len(12)
 
 PUB preset_dr5{}
 ' Physical bitrate (Rb) 22_200
     preset_lora{}
     spread_fact(7)
-    rf_rx_bw(812_500)
+    rx_bw(812_500)
     preamble_len(12)
 
 PUB preset_dr6{}
 ' Physical bitrate (Rb) 38_000
     preset_lora{}
     spread_fact(6)
-    rf_rx_bw(812_500)
+    rx_bw(812_500)
     preamble_len(12)
 
 PUB preset_dr7{}
 ' Physical bitrate (Rb) 63_000
     preset_lora{}
     spread_fact(5)
-    rf_rx_bw(812_500)
+    rx_bw(812_500)
     preamble_len(12)
 
 PUB bt(b_t): curr_bt
@@ -281,7 +281,7 @@ PUB crc_check_ena(state): curr_state
 ' Enable CRC generation (TX) and checking (RX)
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
-    case rf_modulation(-2)
+    case modulation(-2)
         GFSK:
             case ||(state)
                 0:
@@ -406,7 +406,7 @@ PUB fifo_rx_base_ptr(rxp)
 PUB fifo_rx_current_addr{}: addr
 ' Start address (in FIFO) of last packet received
 '   Returns: Starting address of last packet received
-    rxbuffstatus{}
+    rx_buff_status{}
     return _lastrx_paylen
 
 PUB fifo_tx_base_ptr(txp)
@@ -425,14 +425,14 @@ PUB freq_dev(freq): curr_freq | modidx
 '   Valid values: 62_500..1_000_000
 '   Any other value returns the current (cached) setting
 '   NOTE: Valid only when Modulation() == GFSK, BLE
-    case rf_modulation(-2)
+    case modulation(-2)
         GFSK, BLE:
             case freq
                 62_500..1_000_000:
                     modidx := (8 * ((freq * 1_00) / _rate)) - 1_00
                     ifnot lookdown(modidx: 0_35..4_00)
                         return                  ' mod idx > 4.00 is invalid
-                    rf_mod_idx(modidx)
+                    mod_idx(modidx)
         other:
             return
 
@@ -626,7 +626,7 @@ PUB iq_inv(state): curr_state
 
 PUB last_pkt_len{}: nr_bytes
 ' Return number of payload bytes of last packet received
-    rxbuffstatus{}
+    rx_buff_status{}
     return _lastrx_paylen
 
 PUB modulation(mode)
@@ -639,17 +639,17 @@ PUB modulation(mode)
 '       BLE (4)
 '   NOTE: This setting must be configured before any others, as no
 '   existing settings are preserved when this setting is changed, and
-'   some settings have a rf_modulation-specific meaning
+'   some settings have a modulation-specific meaning
     case mode
         GFSK, LORA, RANGING, FLRC, BLE:
-            _rf_modulation := mode
+            _modulation := mode
             idle{}                              ' must be set in idle/standby
             cmd(core#SET_PKTTYPE, @mode, 1, 0, 0)
         other:
-            return _rf_modulation
+            return _modulation
 
 PUB mod_idx(idx): curr_idx
-' Set rf_modulation index
+' Set modulation index
 '   Valid values:
 '       0_35 (=0.35), 0_50..4_00 (=4.00), in increments of 0_25
 '   Any other value returns the current (cached) setting
@@ -718,7 +718,7 @@ PUB payld_len(length): curr_len
 ' Set packet length, in bytes
 '   Valid values: 0..255
 '   Any other value returns the current (cached) setting
-    case rf_modulation(-2)
+    case modulation(-2)
         GFSK:
             case length
                 0..255:
@@ -740,7 +740,7 @@ PUB payld_len_cfg(mode): curr_mode
 '       PKTLEN_FIXED ($00): Fixed-length packet/payload
 '       PKTLEN_VAR ($20): Variable-length packet/payload
 '   Any other value returns the current (cached) setting
-    case rf_modulation(-2)
+    case modulation(-2)
         GFSK:
             case mode
                 PKTLEN_FIXED, PKTLEN_VAR:
@@ -783,7 +783,7 @@ PUB preamble_len(len): curr_len | mant, exp, len_calc
 ' Set preamble length, in bits (when Modulation() == GFSK)
 '   Valid values: 4, 8, 12, 16, 20, 24, 28, 32
 '   Any other value returns the current (cached) setting
-    case rf_modulation(-2)
+    case modulation(-2)
         GFSK:
             case len
                 4, 8, 12, 16, 20, 24, 28, 32:
@@ -851,7 +851,7 @@ PUB rx_bw(bw): curr_bw
 '       LORA            203_125, 406_250, 812_500, 1_625_000
 '   Any other value returns the current (cached) setting
 '   NOTE: Cached setting - commit to transceiver using DataRate()
-    case rf_modulation(-2)
+    case modulation(-2)
         GFSK:
             case bw
                 300_000, 600_000, 1_200_000, 2_400_000:

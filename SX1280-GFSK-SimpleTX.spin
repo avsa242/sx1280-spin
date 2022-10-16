@@ -1,12 +1,12 @@
 {
     --------------------------------------------
-    Filename: SX1280-TXDemo.spin
+    Filename: SX1280-SimpleTX.spin
     Author: Jesse Burt
     Description: Simple TX demo for the SX1280 driver
         (GFSK modulation)
     Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Aug 20, 2022
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -31,7 +31,7 @@ CON
 
 OBJ
 
-    cfg   : "core.con.boardcfg.flip"
+    cfg   : "boardcfg.flip"
     ser   : "com.serial.terminal.ansi"
     time  : "time"
     sx1280: "wireless.transceiver.sx1280"
@@ -41,50 +41,50 @@ VAR
 
     byte _txbuff[PAYLD_MAX]
 
-PUB Main{} | count, sz, user_str
+PUB main{} | count, sz, user_str
 
     setup{}
 
 '    sx1280.preset_gfsk_125k_0p3bw
-'    sx1280.datarate(250_000)
+'    sx1280.data_rate(250_000)
 '    repeat sz from 80_000 to 250_000 step 10_000
 '        sx1280.freqdeviation(sz)
-'        ser.printf2(string("%d   --   %d\n"), sz, sx1280.modulationidx(-2))
+'        ser.printf2(string("%d   --   %d\n"), sz, sx1280.mod_idx(-2))
 '    repeat
     ' user-modifiable string to send over the air
     user_str := string("This is message # $%4.4x")
 
     sx1280.preset_gfsk_125k_0p3bw{}             ' GFSK, 125kbps, 300kHz BW
-    sx1280.datarate(250_000)
-    sx1280.rxbandwidth(300_000)
+    sx1280.data_rate(250_000)
+    sx1280.rx_bw(300_000)
 '    sx1280.freqdeviation(125_000)
-    sx1280.modulationidx(3_00)
-    ser.dec(sx1280.modulationidx(-2))
-    sx1280.bandwidthtime(0)
-    sx1280.datarate(250_000)
+    sx1280.mod_idx(3_00)
+    ser.dec(sx1280.mod_idx(-2))
+    sx1280.bt(0)
+    sx1280.data_rate(250_000)
 '    repeat
-    sx1280.carrierfreq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
+    sx1280.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
-    sx1280.txpower(-18)                         ' -18..13 dBm
+    sx1280.tx_pwr(-18)                         ' -18..13 dBm
 
-    sx1280.intmask(sx1280#TXDONE)               ' set 'transmit done' interrupt
-    sx1280.intclear(sx1280#TXDONE)              ' and make sure it starts clear
+    sx1280.int_mask(sx1280#TXDONE)               ' set 'transmit done' interrupt
+    sx1280.int_clr(sx1280#TXDONE)              ' and make sure it starts clear
 
     count := 0
     repeat
         bytefill(@_txbuff, 0, 255)              ' clear the payload buffer
         str.sprintf1(@_txbuff, user_str, count++)' copy user str w/counter to it
         sz := strsize(@_txbuff)                 ' get the final size
-        sx1280.payloadlen(sz)
+        sx1280.payld_len(sz)
 
         ' show what will be transmitted
         ser.position(0, 3)
         ser.printf2(string("Transmitting %d bytes: %s\n"), sz, @_txbuff)
 
-        sx1280.txpayload(sz, @_txbuff)          ' queue the payload
-        sx1280.txmode{}                         ' now transmit it
-        repeat until sx1280.payloadsent{}       ' wait until radio is done
-        sx1280.intclear(sx1280#TXDONE)
+        sx1280.tx_payld(sz, @_txbuff)          ' queue the payload
+        sx1280.tx_mode{}                         ' now transmit it
+        repeat until sx1280.payld_sent{}       ' wait until radio is done
+        sx1280.int_clr(sx1280#TXDONE)
         time.sleep(1)
 
 PUB Setup{}
