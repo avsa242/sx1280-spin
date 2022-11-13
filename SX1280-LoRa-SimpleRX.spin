@@ -50,7 +50,7 @@ PUB main{} | sz
     sx1280.payld_len(255)                       ' max. accepted size (1..255)
 
     sx1280.int_mask(sx1280#RXDONE)              ' set 'receive done' interrupt
-    sx1280.int_clr(sx1280#RXDONE)               ' and make sure it starts clear
+    sx1280.int_clear(sx1280#RXDONE)               ' and make sure it starts clear
 
     sz := 0
     repeat
@@ -66,7 +66,7 @@ PUB main{} | sz
         ser.printf2(string("Received %d bytes: %s"), sz, @_rxbuff)
         ser.clear_line{}
 
-        sx1280.int_clr(sx1280#RXDONE)
+        sx1280.int_clear(sx1280#RXDONE)
 
 PUB setup{}
 

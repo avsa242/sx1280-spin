@@ -525,7 +525,7 @@ PUB idle{} | tmp
     tmp := 0                                    ' [b0]: Run on RC OSC (13MHz)
     cmd(core#SET_STDBY, @tmp, 1, 0, 0)
 
-PUB int_clr(mask)
+PUB int_clear(mask)
 ' Clear interrupts
 '   Valid values:
 '       Bit Desc.                           Valid when Modulation() is:

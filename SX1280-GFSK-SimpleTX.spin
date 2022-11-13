@@ -54,7 +54,7 @@ PUB main{} | count, sz, user_str
     sx1280.tx_pwr(-18)                          ' -18..13 dBm
 
     sx1280.int_mask(sx1280#TXDONE)              ' set 'transmit done' interrupt
-    sx1280.int_clr(sx1280#TXDONE)               ' and make sure it starts clear
+    sx1280.int_clear(sx1280#TXDONE)               ' and make sure it starts clear
 
     count := 0
     repeat
@@ -70,7 +70,7 @@ PUB main{} | count, sz, user_str
         sx1280.tx_payld(sz, @_txbuff)           ' queue the payload
         sx1280.tx_mode{}                        ' now transmit it
         repeat until sx1280.payld_sent{}        ' wait until radio is done
-        sx1280.int_clr(sx1280#TXDONE)
+        sx1280.int_clear(sx1280#TXDONE)
         time.sleep(1)
 
 PUB setup{}
