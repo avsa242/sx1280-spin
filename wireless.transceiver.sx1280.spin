@@ -5,7 +5,7 @@
     Description: Driver for the SX1280 2.4GHz transceiver
     Copyright (c) 2022
     Started Feb 14, 2020
-    Updated Oct 16, 2022
+    Updated Nov 13, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -143,7 +143,7 @@ PUB preset_gfsk_125k_0p3bw{}
     data_rate(125_000)
     syncwd_len(5)
     syncwd_mode(SWD1)
-    syncwd(string($e7, $e6, $e5, $e4, $e3))
+    set_syncwd(string($e7, $e6, $e5, $e4, $e3))
     payld_len_cfg(PKTLEN_VAR)
     pa_ramp_time(20)
 
@@ -898,6 +898,11 @@ PUB rx_payld(nr_bytes, ptr_buff)
         other:
             return
 
+PUB set_syncwd(ptr_syncwd)
+' Set syncword
+'   ptr_syncwd: pointer to copy syncword data from
+    writereg(core#SYNCWD1, 5, ptr_syncwd)
+
 PUB sleep{} | tmp
 ' Power down chip
     tmp := 0                                    '[b1..0]: RAM flushed in sleep
@@ -929,10 +934,9 @@ PUB status_reg{}: stat
     return _status
 
 PUB syncwd(ptr_sw)
-' Set syncword
-'   Valid values:
-'       pointer to 5-byte array containing syncwd
-    writereg(core#SYNCWD1, 5, ptr_sw)
+' Get current syncword
+'   ptr_syncwd: pointer to copy syncword data to
+    readreg(core#SYNCWD1, 5, ptr_syncwd)
 
 PUB syncwd_len(length): curr_len
 ' Set syncword length, in bytes
@@ -949,7 +953,7 @@ PUB syncwd_len(length): curr_len
 PUB syncwd_mode(mode): curr_mode
 ' Set syncword mode/combination
 '   Valid values:
-'       Symbol              RXMode()            TXMode()
+'       Symbol              rx_mode()           tx_mode()
 '       SWD_DISABLE ($00)   Disable syncword    No syncword
 '       SWD1 ($10)          Syncword 1          Syncword 1
 '       SWD2 ($20)          Syncword 2          Syncword 2

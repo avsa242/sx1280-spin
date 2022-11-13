@@ -6,7 +6,7 @@
         (LoRa modulation)
     Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Oct 16, 2022
+    Updated Nov 13, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -41,7 +41,7 @@ VAR
 
     byte _txbuff[PAYLD_MAX]
 
-PUB Main{} | count, sz, user_str
+PUB main{} | count, sz, user_str
 
     setup{}
 
@@ -49,13 +49,13 @@ PUB Main{} | count, sz, user_str
     user_str := string("This is message # $%04.4x")
 
     sx1280.modulation(sx1280#LORA)
-    sx1280.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
+    sx1280.carrier_freq(2_401_000)              ' 2_400_000..2_500_000 (kHz)
 
     sx1280.preset_dr7{}                         ' LoRa presets (DR0..7)
-    sx1280.tx_pwr(-18)                         ' -18..13 dBm
+    sx1280.tx_pwr(-18)                          ' -18..13 dBm
 
-    sx1280.int_mask(sx1280#TXDONE)               ' set 'transmit done' interrupt
-    sx1280.int_clr(sx1280#TXDONE)              ' and make sure it starts clear
+    sx1280.int_mask(sx1280#TXDONE)              ' set 'transmit done' interrupt
+    sx1280.int_clr(sx1280#TXDONE)               ' and make sure it starts clear
 
     count := 0
     repeat
@@ -65,17 +65,17 @@ PUB Main{} | count, sz, user_str
         sx1280.payld_len(sz)
 
         ' show what will be transmitted
-        ser.position(0, 3)
+        ser.pos_xy(0, 3)
         ser.printf2(string("Transmitting %d bytes: %s\n"), sz, @_txbuff)
 
-        sx1280.tx_payld(sz, @_txbuff)          ' queue the payload
-        sx1280.tx_mode{}                         ' now transmit it
+        sx1280.tx_payld(sz, @_txbuff)           ' queue the payload
+        sx1280.tx_mode{}                        ' now transmit it
         ' wait until radio is done
         repeat until (sx1280.interrupt{} & sx1280#TXDONE)
         sx1280.int_clr(sx1280#TXDONE)
         time.sleep(1)
 
-PUB Setup{}
+PUB setup{}
 
     ser.start(SER_BAUD)
     time.msleep(30)

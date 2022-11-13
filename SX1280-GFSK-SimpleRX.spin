@@ -6,7 +6,7 @@
         (GFSK modulation)
     Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Oct 16, 2022
+    Updated Nov 13, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -44,24 +44,24 @@ PUB main{} | sz
 
     setup{}
     sx1280.preset_gfsk_125k_0p3bw{}             ' GFSK, 125kbps, 300kHz BW
-    sx1280.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
-    sx1280.payld_len(255)                      ' max. accepted size (1..255)
+    sx1280.carrier_freq(2_401_000)              ' 2_400_000..2_500_000 (kHz)
+    sx1280.payld_len(255)                       ' max. accepted size (1..255)
 
-    sx1280.int_mask(sx1280#RXDONE)               ' set 'receive done' interrupt
-    sx1280.int_clr(sx1280#RXDONE)              ' and make sure it starts clear
+    sx1280.int_mask(sx1280#RXDONE)              ' set 'receive done' interrupt
+    sx1280.int_clr(sx1280#RXDONE)               ' and make sure it starts clear
 
     sz := 0
     repeat
-        sx1280.rx_mode{}                         ' setup for reception
-        repeat until sx1280.payld_rdy{}      ' wait for data to be received
+        sx1280.rx_mode{}                        ' setup for reception
+        repeat until sx1280.payld_rdy{}         ' wait for data to be received
         bytefill(@_rxbuff, 0, 255)              ' clear the payload buffer
-        sz := sx1280.last_pkt_len{}          ' how many bytes was the data?
-        sx1280.rx_payld(sz, @_rxbuff)          ' receive that many into buffer
+        sz := sx1280.last_pkt_len{}             ' how many bytes was the data?
+        sx1280.rx_payld(sz, @_rxbuff)           ' receive that many into buffer
 
         ' show what was received
-        ser.position(0, 3)
+        ser.pos_xy(0, 3)
         ser.printf2(string("Received %d bytes: %s"), sz, @_rxbuff)
-        ser.clearline{}
+        ser.clear_line{}
 
         sx1280.int_clr(sx1280#RXDONE)
 

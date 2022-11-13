@@ -6,7 +6,7 @@
         (GFSK modulation)
     Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Oct 16, 2022
+    Updated Nov 13, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -45,30 +45,16 @@ PUB main{} | count, sz, user_str
 
     setup{}
 
-'    sx1280.preset_gfsk_125k_0p3bw
-'    sx1280.data_rate(250_000)
-'    repeat sz from 80_000 to 250_000 step 10_000
-'        sx1280.freqdeviation(sz)
-'        ser.printf2(string("%d   --   %d\n"), sz, sx1280.mod_idx(-2))
-'    repeat
     ' user-modifiable string to send over the air
     user_str := string("This is message # $%4.4x")
 
     sx1280.preset_gfsk_125k_0p3bw{}             ' GFSK, 125kbps, 300kHz BW
-    sx1280.data_rate(250_000)
-    sx1280.rx_bw(300_000)
-'    sx1280.freqdeviation(125_000)
-    sx1280.mod_idx(3_00)
-    ser.dec(sx1280.mod_idx(-2))
-    sx1280.bt(0)
-    sx1280.data_rate(250_000)
-'    repeat
-    sx1280.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
+    sx1280.carrier_freq(2_401_000)              ' 2_400_000..2_500_000 (kHz)
 
-    sx1280.tx_pwr(-18)                         ' -18..13 dBm
+    sx1280.tx_pwr(-18)                          ' -18..13 dBm
 
-    sx1280.int_mask(sx1280#TXDONE)               ' set 'transmit done' interrupt
-    sx1280.int_clr(sx1280#TXDONE)              ' and make sure it starts clear
+    sx1280.int_mask(sx1280#TXDONE)              ' set 'transmit done' interrupt
+    sx1280.int_clr(sx1280#TXDONE)               ' and make sure it starts clear
 
     count := 0
     repeat
@@ -78,16 +64,16 @@ PUB main{} | count, sz, user_str
         sx1280.payld_len(sz)
 
         ' show what will be transmitted
-        ser.position(0, 3)
+        ser.pos_xy(0, 3)
         ser.printf2(string("Transmitting %d bytes: %s\n"), sz, @_txbuff)
 
-        sx1280.tx_payld(sz, @_txbuff)          ' queue the payload
-        sx1280.tx_mode{}                         ' now transmit it
-        repeat until sx1280.payld_sent{}       ' wait until radio is done
+        sx1280.tx_payld(sz, @_txbuff)           ' queue the payload
+        sx1280.tx_mode{}                        ' now transmit it
+        repeat until sx1280.payld_sent{}        ' wait until radio is done
         sx1280.int_clr(sx1280#TXDONE)
         time.sleep(1)
 
-PUB Setup{}
+PUB setup{}
 
     ser.start(SER_BAUD)
     time.msleep(30)
@@ -97,10 +83,7 @@ PUB Setup{}
         ser.strln(string("SX1280 driver started"))
     else
         ser.strln(string("SX1280 driver failed to start - halting"))
-        time.msleep(5)
-        ser.stop
         repeat
-
 
 DAT
 {
