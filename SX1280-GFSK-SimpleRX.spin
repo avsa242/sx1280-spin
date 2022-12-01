@@ -6,7 +6,7 @@
         (GFSK modulation)
     Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Nov 13, 2022
+    Updated Dec 1, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -20,12 +20,12 @@ CON
     SER_BAUD    = 115_200
     LED         = cfg#LED1
 
-    CS_PIN      = 8
-    SCK_PIN     = 9
-    MOSI_PIN    = 10
-    MISO_PIN    = 11
-    RST_PIN     = 12
-    BUSY_PIN    = 13
+    CS_PIN      = 0
+    SCK_PIN     = 1
+    MOSI_PIN    = 2
+    MISO_PIN    = 3
+    RST_PIN     = 4
+    BUSY_PIN    = 5
 ' --
     PAYLD_MAX   = sx1280#PAYLD_MAX
 
@@ -60,8 +60,8 @@ PUB main{} | sz
 
         ' show what was received
         ser.pos_xy(0, 3)
-        ser.printf2(string("Received %d bytes: %s"), sz, @_rxbuff)
-        ser.clear_line{}
+        ser.printf1(string("Received %d bytes:\n\r"), sz)
+        ser.hexdump(@_rxbuff, 0, 4, sz, 16 <# sz)
 
         sx1280.int_clear(sx1280#RXDONE)
 

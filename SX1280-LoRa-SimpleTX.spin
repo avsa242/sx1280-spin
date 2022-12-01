@@ -6,7 +6,7 @@
         (LoRa modulation)
     Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Nov 13, 2022
+    Updated Dec 1, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -20,12 +20,12 @@ CON
     SER_BAUD    = 115_200
     LED         = cfg#LED1
 
-    CS_PIN      = 8
-    SCK_PIN     = 9
-    MOSI_PIN    = 10
-    MISO_PIN    = 11
-    RST_PIN     = 12
-    BUSY_PIN    = 13
+    CS_PIN      = 0
+    SCK_PIN     = 1
+    MOSI_PIN    = 2
+    MISO_PIN    = 3
+    RST_PIN     = 4
+    BUSY_PIN    = 5
 ' --
     PAYLD_MAX   = sx1280#PAYLD_MAX
 
@@ -55,7 +55,7 @@ PUB main{} | count, sz, user_str
     sx1280.tx_pwr(-18)                          ' -18..13 dBm
 
     sx1280.int_mask(sx1280#TXDONE)              ' set 'transmit done' interrupt
-    sx1280.int_clear(sx1280#TXDONE)               ' and make sure it starts clear
+    sx1280.int_clear(sx1280#TXDONE)             ' and make sure it starts clear
 
     count := 0
     repeat
@@ -66,7 +66,8 @@ PUB main{} | count, sz, user_str
 
         ' show what will be transmitted
         ser.pos_xy(0, 3)
-        ser.printf2(string("Transmitting %d bytes: %s\n"), sz, @_txbuff)
+        ser.printf1(string("Transmitting %d bytes:\n\r"), sz)
+        ser.hexdump(@_txbuff, 0, 4, sz, 16 <# sz)
 
         sx1280.tx_payld(sz, @_txbuff)           ' queue the payload
         sx1280.tx_mode{}                        ' now transmit it

@@ -6,7 +6,7 @@
         (GFSK modulation)
     Copyright (c) 2022
     Started Apr 18, 2021
-    Updated Nov 13, 2022
+    Updated Dec 1, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -20,12 +20,12 @@ CON
     SER_BAUD    = 115_200
     LED         = cfg#LED1
 
-    CS_PIN      = 8
-    SCK_PIN     = 9
-    MOSI_PIN    = 10
-    MISO_PIN    = 11
-    RST_PIN     = 12
-    BUSY_PIN    = 13
+    CS_PIN      = 0
+    SCK_PIN     = 1
+    MOSI_PIN    = 2
+    MISO_PIN    = 3
+    RST_PIN     = 4
+    BUSY_PIN    = 5
 ' --
     PAYLD_MAX   = sx1280#PAYLD_MAX
 
@@ -46,7 +46,7 @@ PUB main{} | count, sz, user_str
     setup{}
 
     ' user-modifiable string to send over the air
-    user_str := string("This is message # $%4.4x")
+    user_str := string("This is message # $%04.4x")
 
     sx1280.preset_gfsk_125k_0p3bw{}             ' GFSK, 125kbps, 300kHz BW
     sx1280.carrier_freq(2_401_000)              ' 2_400_000..2_500_000 (kHz)
@@ -65,7 +65,8 @@ PUB main{} | count, sz, user_str
 
         ' show what will be transmitted
         ser.pos_xy(0, 3)
-        ser.printf2(string("Transmitting %d bytes: %s\n"), sz, @_txbuff)
+        ser.printf1(string("Transmitting %d bytes:\n\r"), sz)
+        ser.hexdump(@_txbuff, 0, 4, sz, 16 <# sz)
 
         sx1280.tx_payld(sz, @_txbuff)           ' queue the payload
         sx1280.tx_mode{}                        ' now transmit it
