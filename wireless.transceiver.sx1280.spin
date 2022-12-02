@@ -229,7 +229,7 @@ PUB bt(b_t): curr_bt
 '       1_0 (1.0)
 '       0_5 (0.5)
 '   Any other value returns the current (cached) setting
-'   NOTE: Used when Modulation() == GFSK
+'   NOTE: Used when modulation() == GFSK
     case b_t
         0, 1_0, 0_5:
             _mod_bwt := (lookdownz(b_t: 0, 1_0, 0_5) << 4)
@@ -424,7 +424,7 @@ PUB freq_dev(freq): curr_freq | modidx
 ' Set frequency deviation, in Hz
 '   Valid values: 62_500..1_000_000
 '   Any other value returns the current (cached) setting
-'   NOTE: Valid only when Modulation() == GFSK, BLE
+'   NOTE: Valid only when modulation() == GFSK, BLE
     case modulation(-2)
         GFSK, BLE:
             case freq
@@ -439,7 +439,7 @@ PUB freq_dev(freq): curr_freq | modidx
 PUB gpio1(mask): curr_mask
 ' Configure signal output on DIO1
 '   Valid values:
-'       Bit Desc.                           Valid when Modulation() is:
+'       Bit Desc.                           Valid when modulation() is:
 '       15  Preamble detected               LORA, GFSK, BLE
 '       15  Adv. ranging done               RANGING
 '       14  RxTx Timeout                    All
@@ -467,7 +467,7 @@ PUB gpio1(mask): curr_mask
 PUB gpio2(mask): curr_mask
 ' Configure signal output on DIO2
 '   Valid values:
-'       Bit Desc.                           Valid when Modulation() is:
+'       Bit Desc.                           Valid when modulation() is:
 '       15  Preamble detected               LORA, GFSK, BLE
 '       15  Adv. ranging done               RANGING
 '       14  RxTx Timeout                    All
@@ -495,7 +495,7 @@ PUB gpio2(mask): curr_mask
 PUB gpio3(mask): curr_mask
 ' Configure signal output on DIO3
 '   Valid values:
-'       Bit Desc.                           Valid when Modulation() is:
+'       Bit Desc.                           Valid when modulation() is:
 '       15  Preamble detected               LORA, GFSK, BLE
 '       15  Adv. ranging done               RANGING
 '       14  RxTx Timeout                    All
@@ -528,7 +528,7 @@ PUB idle{} | tmp
 PUB int_clear(mask)
 ' Clear interrupts
 '   Valid values:
-'       Bit Desc.                           Valid when Modulation() is:
+'       Bit Desc.                           Valid when modulation() is:
 '       15  Preamble detected               LORA, GFSK, BLE
 '       15  Adv. ranging done               RANGING
 '       14  RxTx Timeout                    All
@@ -555,7 +555,7 @@ PUB int_clear(mask)
 PUB interrupt{}: int_src
 ' Flag indicating interrupt(s) asserted
 '   Returns: 16bit mask
-'       Bit Desc.                           Valid when Modulation() is:
+'       Bit Desc.                           Valid when modulation() is:
 '       15  Preamble detected               LORA, GFSK, BLE
 '       15  Adv. ranging done               RANGING
 '       14  RxTx Timeout                    All
@@ -578,7 +578,7 @@ PUB interrupt{}: int_src
 PUB int_mask(mask): curr_mask | tmp[2]
 ' Set interrupt mask
 '   Valid values:
-'       Bit Desc.                           Valid when Modulation() is:
+'       Bit Desc.                           Valid when modulation() is:
 '       15  Preamble detected               LORA, GFSK, BLE
 '       15  Adv. ranging done               RANGING
 '       14  RxTx Timeout                    All
@@ -612,15 +612,13 @@ PUB iq_inv(state): curr_state
 ' Invert I/Q
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
-'   NOTE: Only valid when Modulation() == LORA
+'   NOTE: Only valid when modulation() == LORA
     case ||(state)
         0, 1:
-            _lora_iqswap := lookdownz(||(state): core#LORA_IQ_STD, {
-}           core#LORA_IQ_INVERTED)
+            _lora_iqswap := lookdownz(||(state): core#LORA_IQ_STD, core#LORA_IQ_INVERTED)
         other:
             curr_state := _lora_iqswap
-            return (lookupz(curr_state: core#LORA_IQ_STD, {
-}           core#LORA_IQ_INVERTED) == 1)
+            return (lookupz(curr_state: core#LORA_IQ_STD, core#LORA_IQ_INVERTED) == 1)
 
     cmd(core#SET_PKTPARAMS, @_lora_preamble, 5, 0, 0)
 
@@ -653,7 +651,7 @@ PUB mod_idx(idx): curr_idx
 '   Valid values:
 '       0_35 (=0.35), 0_50..4_00 (=4.00), in increments of 0_25
 '   Any other value returns the current (cached) setting
-'   NOTE: For use when Modulation() == GFSK
+'   NOTE: For use when modulation() == GFSK
 '   NOTE: Cached setting - commit to transceiver using DataRate()
     case idx
         0_35..4_00:
@@ -690,7 +688,7 @@ PUB pkt_status(ptr_stat)
 ' Get packet status
 '   Valid values:
 '       pointer to buffer (5-byte minimum)
-'   Byte    Desc                Valid when Modulation() is:
+'   Byte    Desc                Valid when modulation() is:
 '   0       RFU                         BLE, GFSK, FLRC
 '   0       RSSI when syncwd detected LORA, RANGING
 '   1       RSSI_SYNC                   BLE, GFSK, FLRC
@@ -764,8 +762,8 @@ PUB payld_len_cfg(mode): curr_mode
 PUB payld_rdy{}: flag
 ' Flag indicating payload ready/received
 '   Returns: TRUE (-1) or FALSE (0)
-'   NOTE: Applies when Modulation() == BLE, GFSK, FLRC
-'   When Modulation() == LORA, set IntMask() to RXDONE and check
+'   NOTE: Applies when modulation() == BLE, GFSK, FLRC
+'   When modulation() == LORA, set IntMask() to RXDONE and check
 '       Interrupt() & RXDONE
     pkt_status(@_pktstatus)
     return ((_pktstatus[2] & PSTAT_PAYLDRDY) <> 0)
@@ -773,14 +771,14 @@ PUB payld_rdy{}: flag
 PUB payld_sent{}: flag
 ' Flag indicating payload sent
 '   Returns: TRUE (-1) or FALSE (0)
-'   NOTE: Applies when Modulation() == BLE, GFSK, FLRC
-'   When Modulation() == LORA, set IntMask() to TXDONE and check
+'   NOTE: Applies when modulation() == BLE, GFSK, FLRC
+'   When modulation() == LORA, set IntMask() to TXDONE and check
 '       Interrupt() & TXDONE
     pkt_status(@_pktstatus)
     return ((_pktstatus[3] & PSTAT_PAYLDSENT) <> 0)
 
 PUB preamble_len(len): curr_len | mant, exp, len_calc
-' Set preamble length, in bits (when Modulation() == GFSK)
+' Set preamble length, in bits (when modulation() == GFSK)
 '   Valid values: 4, 8, 12, 16, 20, 24, 28, 32
 '   Any other value returns the current (cached) setting
     case modulation(-2)
@@ -818,7 +816,8 @@ PUB pa_ramp_time(rtime): curr_rtime
 '   Valid values:
 '       *20, 16, 12, 10, 8, 6, 4, 2
 '   Any other returns the current (cached) setting
-'   NOTE: Cached setting - commit to transceiver using TXPower()
+'   NOTE: This setting is only cached in MCU RAM - to actually commit it to the transceiver,
+'       call tx_pwr()
     case rtime
         20, 16, 12, 10, 8, 6, 4, 2:
             _pa_ramp_time := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
@@ -840,17 +839,20 @@ PUB reset{}
 PUB rssi{}: curr_rssi
 ' Received Signal Strength Indicator
 '   Returns: RSSI in dBm
+    curr_rssi := 0
     cmd(core#GET_RSSIINST, 0, 0, @curr_rssi, 1)
     return (-curr_rssi)/2
 
+PUB rx_bandwidth = rx_bw
 PUB rx_bw(bw): curr_bw
 ' Set transceiver bandwidth (DSB), in Hz
 '   Valid values:
-'       Modulation()    Values
+'       modulation()    Values
 '       GFSK            300_000, 600_000, 1_200_000, 2_400_000
 '       LORA            203_125, 406_250, 812_500, 1_625_000
 '   Any other value returns the current (cached) setting
-'   NOTE: Cached setting - commit to transceiver using DataRate()
+'   NOTE: This setting is only cached in MCU RAM - to actually commit it to the transceiver,
+'       call data_rate()
     case modulation(-2)
         GFSK:
             case bw
@@ -901,6 +903,7 @@ PUB rx_payld(nr_bytes, ptr_buff)
 PUB set_syncwd(ptr_syncwd)
 ' Set syncword
 '   ptr_syncwd: pointer to copy syncword data from
+'   NOTE: Syncword is expected to be 5 bytes in length
     writereg(core#SYNCWD1, 5, ptr_syncwd)
 
 PUB sleep{} | tmp
