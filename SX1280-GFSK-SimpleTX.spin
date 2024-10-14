@@ -1,94 +1,93 @@
 {
-    --------------------------------------------
-    Filename: SX1280-SimpleTX.spin
-    Author: Jesse Burt
-    Description: Simple TX demo for the SX1280 driver
-        (GFSK modulation)
-    Copyright (c) 2022
-    Started Apr 18, 2021
-    Updated Dec 1, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       SX1280-GFSK-SimpleTX.spin
+    Description:    Simple TX demo for the SX1280 driver
+        * GFSK modulation
+    Author:         Jesse Burt
+    Started:        Apr 18, 2021
+    Updated:        Oct 14, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
-' -- User-defined constants
-    SER_BAUD    = 115_200
-    LED         = cfg#LED1
-
-    CS_PIN      = 0
-    SCK_PIN     = 1
-    MOSI_PIN    = 2
-    MISO_PIN    = 3
-    RST_PIN     = 4
-    BUSY_PIN    = 5
-' --
-    PAYLD_MAX   = sx1280#PAYLD_MAX
 
 OBJ
 
-    cfg   : "boardcfg.flip"
-    ser   : "com.serial.terminal.ansi"
-    time  : "time"
-    sx1280: "wireless.transceiver.sx1280"
-    str   : "string"
+    time:   "time"
+    str:    "string"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    radio:  "wireless.transceiver.sx1280" | CS=0, SCK=1, MOSI=2, MISO=3, RST=4, BUSY_PIN=5
+
 
 VAR
 
-    byte _txbuff[PAYLD_MAX]
+    byte _txbuff[radio.PAYLD_LEN_MAX]
 
-PUB main{} | count, sz, user_str
 
-    setup{}
+PUB main() | count, sz, user_str
+
+    setup()
 
     ' user-modifiable string to send over the air
-    user_str := string("This is message # $%04.4x")
+    ' NOTE: the format should match the parameters in the sprintf() call below
+    user_str := @"This is message # $%04.4x"
 
-    sx1280.preset_gfsk_125k_0p3bw{}             ' GFSK, 125kbps, 300kHz BW
-    sx1280.carrier_freq(2_401_000)              ' 2_400_000..2_500_000 (kHz)
+    radio.preset_gfsk_125k_0p3bw()              ' GFSK preset: 125kbps, 300kHz BW
+    radio.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
-    sx1280.tx_pwr(-18)                          ' -18..13 dBm
+    radio.tx_pwr(-18)                           ' -18..13 dBm
 
-    sx1280.int_mask(sx1280#TXDONE)              ' set 'transmit done' interrupt
-    sx1280.int_clear(sx1280#TXDONE)               ' and make sure it starts clear
+    radio.int_mask(radio.TXDONE)                ' set 'transmit done' interrupt
+    radio.int_clear(radio.TXDONE)               ' and make sure it starts clear
 
     count := 0
     repeat
-        bytefill(@_txbuff, 0, 255)              ' clear the payload buffer
-        str.sprintf1(@_txbuff, user_str, count++)' copy user str w/counter to it
-        sz := strsize(@_txbuff)                 ' get the final size
-        sx1280.payld_len(sz)
+        ' clear the temporary string buffer and copy the user string with a counter to it
+        bytefill(@_txbuff, 0, radio.PAYLD_LEN_MAX)
+        str.sprintf1(@_txbuff, user_str, count++)
+
+        ' get the final size of the string and tell the radio about it
+        sz := strsize(@_txbuff)
+        radio.payld_len(sz)
 
         ' show what will be transmitted
         ser.pos_xy(0, 3)
-        ser.printf1(string("Transmitting %d bytes:\n\r"), sz)
+        ser.printf1(@"Transmitting %d bytes:\n\r", sz)
         ser.hexdump(@_txbuff, 0, 4, sz, 16 <# sz)
 
-        sx1280.tx_payld(sz, @_txbuff)           ' queue the payload
-        sx1280.tx_mode{}                        ' now transmit it
-        repeat until sx1280.payld_sent{}        ' wait until radio is done
-        sx1280.int_clear(sx1280#TXDONE)
+        ' queue and transmit it
+        radio.tx_payld(sz, @_txbuff)
+        radio.tx_mode()
+
+        ' wait until the radio is done
+        repeat
+        until radio.payld_sent()
+        radio.int_clear(radio.TXDONE)
         time.sleep(1)
 
-PUB setup{}
 
-    ser.start(SER_BAUD)
+PUB setup()
+
+    ser.start()
     time.msleep(30)
-    ser.clear{}
-    ser.strln(string("Serial terminal started"))
-    if sx1280.startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, RST_PIN, BUSY_PIN)
-        ser.strln(string("SX1280 driver started"))
+    ser.clear()
+    ser.strln(@"Serial terminal started")
+
+    if ( radio.start() )
+        ser.strln(@"SX1280 driver started")
     else
-        ser.strln(string("SX1280 driver failed to start - halting"))
+        ser.strln(@"SX1280 driver failed to start - halting")
         repeat
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

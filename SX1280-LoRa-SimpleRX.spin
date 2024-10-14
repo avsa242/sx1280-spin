@@ -1,88 +1,82 @@
 {
-    --------------------------------------------
-    Filename: SX1280-LoRa-SimpleRX.spin
-    Author: Jesse Burt
-    Description: Simple RX demo for the SX1280 driver
-        (LoRa modulation)
-    Copyright (c) 2022
-    Started Apr 18, 2021
-    Updated Dec 1, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       SX1280-LoRa-SimpleRX.spin
+    Description:    Simple RX demo for the SX1280 driver
+        * LoRa modulation
+    Author:         Jesse Burt
+    Started:        Apr 18, 2021
+    Updated:        Oct 14, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
-' -- User-defined constants
-    SER_BAUD    = 115_200
-    LED         = cfg#LED1
-
-    CS_PIN      = 0
-    SCK_PIN     = 1
-    MOSI_PIN    = 2
-    MISO_PIN    = 3
-    RST_PIN     = 4
-    BUSY_PIN    = 5
-' --
-    PAYLD_MAX   = sx1280#PAYLD_MAX
 
 OBJ
 
-    cfg   : "boardcfg.flip"
-    ser   : "com.serial.terminal.ansi"
-    time  : "time"
-    sx1280: "wireless.transceiver.sx1280"
+    time:   "time"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    radio:  "wireless.transceiver.sx1280" | CS=0, SCK=1, MOSI=2, MISO=3, RST=4, BUSY_PIN=5
+
 
 VAR
 
-    byte _rxbuff[PAYLD_MAX]
+    byte _rxbuff[radio.PAYLD_LEN_MAX]
 
-PUB main{} | sz
 
-    setup{}
-    sx1280.modulation(sx1280#LORA)
-    sx1280.carrier_freq(2_401_000)              ' 2_400_000..2_500_000 (kHz)
+PUB main() | sz
 
-    sx1280.preset_dr7{}                         ' LoRa presets (DR0..7)
-    sx1280.payld_len(255)                       ' max. accepted size (1..255)
+    setup()
+    radio.modulation(radio.LORA)
+    radio.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
-    sx1280.int_mask(sx1280#RXDONE)              ' set 'receive done' interrupt
-    sx1280.int_clear(sx1280#RXDONE)             ' and make sure it starts clear
+    radio.preset_dr7()                          ' LoRa presets (DR0..7)
+    radio.payld_len(255)                        ' max. accepted size (1..255)
+
+    radio.int_mask(radio.RXDONE)                ' set 'receive done' interrupt
+    radio.int_clear(radio.RXDONE)               ' and make sure it starts clear
 
     sz := 0
     repeat
-        sx1280.rx_mode{}                        ' setup for reception
+        radio.rx_mode()                         ' setup for reception
         ' wait for data to be received
-        repeat until (sx1280.interrupt{} & sx1280#RXDONE)
-        bytefill(@_rxbuff, 0, 255)              ' clear the payload buffer
-        sz := sx1280.last_pkt_len{}             ' how many bytes was the data?
-        sx1280.rx_payld(sz, @_rxbuff)           ' receive that many into buffer
+        repeat
+        until ( radio.interrupt() & radio.RXDONE )
+
+        ' clear the temporary buffer and read the payload in from the radio
+        bytefill(@_rxbuff, 0, radio.PAYLD_LEN_MAX)
+        sz := radio.last_pkt_len()              ' how many bytes was the data?
+        radio.rx_payld(sz, @_rxbuff)            ' receive that many into the buffer
 
         ' show what was received
         ser.pos_xy(0, 3)
-        ser.printf1(string("Received %d bytes:\n\r"), sz)
+        ser.printf1(@"Received %d bytes:\n\r", sz)
         ser.hexdump(@_rxbuff, 0, 4, sz, 16 <# sz)
 
-        sx1280.int_clear(sx1280#RXDONE)
+        radio.int_clear(radio.RXDONE)
 
-PUB setup{}
 
-    ser.start(SER_BAUD)
+PUB setup()
+
+    ser.start()
     time.msleep(30)
-    ser.clear{}
-    ser.strln(string("Serial terminal started"))
-    if sx1280.startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, RST_PIN, BUSY_PIN)
-        ser.strln(string("SX1280 driver started"))
+    ser.clear()
+    ser.strln(@"Serial terminal started")
+
+    if ( radio.start() )
+        ser.strln(@"SX1280 driver started")
     else
-        ser.strln(string("SX1280 driver failed to start - halting"))
+        ser.strln(@"SX1280 driver failed to start - halting")
         repeat
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
