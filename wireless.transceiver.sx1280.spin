@@ -4,8 +4,8 @@
     Description:    Driver for the SX1280 2.4GHz transceiver
     Author:         Jesse Burt
     Started:        Feb 14, 2020
-    Updated:        Oct 14, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jan 10, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -90,29 +90,31 @@ VAR
 
     long _CS, _RESET, _BUSY
     long _bw, _freq, _modulation, _opmode
-    long _pa_ramp_time, _rate
-    long _txpwr
+    long _rate
 
-    word _intmask, _gpio1mask, _gpio2mask, _gpio3mask
+    ' SET_DIOIRQPARAMS
+    word _gpio3mask, _gpio2mask, _gpio1mask, _intmask
 
-    ' PACKETPARAMS (do not change order)
-    byte _preamble_len, _syncwd_len, _syncwd_mode, _pktlencfg
-    byte _paylen, _crclen, _data_whiten
+    ' SET_TXPARAMS
+    byte _pa_ramp_time, _txpwr
 
-    byte _lora_preamble, _lora_pktlencfg, _lora_paylen, _lora_crclen
+    ' PACKETPARAMS
+    byte _data_whiten, _crclen, _paylen, _pktlencfg, _syncwd_mode, _syncwd_len, _preamble_len
+
+    byte _lora_preamble, _lora_pktlencfg, _lora_paylen, _lora_crclen'xxx
     byte _lora_iqswap
 
     ' GET_RXBUFFSTATUS
-    byte _lastrx_paylen, _rxbuff_stptr
+    byte _lastrx_paylen, _rxbuff_stptr'xxx
 
     ' SET_BUFF_BASEADDR
-    byte _txfifoptr, _rxfifoptr
+    byte _rxfifoptr, _txfifoptr
 
-    byte _status, _pktstatus[5]
+    byte _status, _pktstatus[5]'xxx
 
     ' SET_MODPARAMS
-    byte _modidx, _mod_bwt
-    byte _lora_sf, _lora_bw, _lora_cr
+    byte _mod_bwt, _modidx, _br_bw
+    byte _lora_cr, _lora_bw, _lora_sf
 
 
 OBJ
@@ -167,19 +169,37 @@ PUB stop()
 
 PUB preset_gfsk_125k_0p3bw()
 ' GFSK modulation, 125kbps, 300kHz bandwidth
-' Modulation Index: 1.0, BT: 0.5
+' Modulation Index: 1.0
+' BT: 0.5
 ' 5-byte syncwd length, match stored syncwd #1 only
 ' Variable-length packet mode
     modulation(GFSK)
-    mod_idx(1_00)
-    bt(0_5)
-    rx_bw(300_000)
-    data_rate(125_000)
-    syncwd_len(5)
-    syncwd_mode(SWD1)
+
+    ' SET_MODPARAMS
+    _br_bw := core.GFSK_BLE_BR_0_125_BW_0_3
+    _modidx := core.MOD_IND_1_00
+    _mod_bwt := core.BT_0_5
+    cmd(core.SET_MODPARAMS, @_mod_bwt, 3)
+    _rate := 125_000
+    _bw := 300_000
+
+
+    ' SET_PKTPARAMS
+    _preamble_len := core.PREAMBLE_LEN_08_BITS  ' 8 bits
+    _syncwd_len := core.SYNC_WORD_LEN_5_B       ' 5 bytes
+    _syncwd_mode := SWD1                        ' match syncword # 1
+    _pktlencfg := PKTLEN_VAR                    ' variable length payloads
+    _paylen := 255                              ' max len=255
+    _crclen := core.RADIO_CRC_2_BYTES           ' 2-byte CRC
+    _data_whiten := core.WHITENING_DISABLE      ' disable data whitening
+    cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
+
     set_syncwd( string($e7, $e6, $e5, $e4, $e3) )
-    payld_len_cfg(PKTLEN_VAR)
-    pa_ramp_time(20)
+
+    ' SET_TXPARAMS
+    _txpwr := -18 + 18                          ' -18dBm
+    _pa_ramp_time := core.RADIO_RAMP_20_US      ' 20uS
+    cmd(core.SET_TXPARAMS, @_pa_ramp_time, 2)
 
 
 PUB preset_lora()
@@ -277,6 +297,7 @@ PUB bt(b_t): curr_bt
     case b_t
         0, 1_0, 0_5:
             _mod_bwt := (lookdownz(b_t: 0, 1_0, 0_5) << 4)
+            cmd(core.SET_MODPARAMS, @_mod_bwt, 3)
         other:
             curr_bt := _mod_bwt >> 4
             return lookupz(curr_bt: 0, 1_0, 0_5)
@@ -318,11 +339,11 @@ PUB code_rate(rate=-2): curr_rate
         $04_05..$04_08, $14_05, $14_06, $14_08:
             rate := lookdown(rate: $04_05, $04_06, $04_07, $04_08, $14_05, $14_06, $14_08)
             _lora_cr := rate
+            cmd(core.SET_MODPARAMS, @_lora_sf, 3) ' set 3 params: SF, BW, CR
         other:
             curr_rate := _lora_cr
             return lookup(rate: $04_05, $04_06, $04_07, $04_08, $14_05, $14_06, $14_08)
 
-    cmd(core.SET_MODPARAMS, @_lora_sf, 3) ' set 3 params: SF, BW, CR
 
 
 PUB crc_check_ena(state=-2): curr_state
@@ -333,17 +354,17 @@ PUB crc_check_ena(state=-2): curr_state
         GFSK:
             case ||(state)
                 0:
-                    _crclen := 0
+                    _crclen := core.RADIO_CRC_OFF
                 1:
                     ' is CRC length already set to something valid? (1 or 2 bytes)
                     ' if so, leave it as-is
                     ' if it's not enabled yet (0), enable it (set it to 1 byte)
-                    ifnot ( lookdown(_crclen: $10, $20) )
-                        _crclen := $10
+                    ifnot ( lookdown(_crclen: core.RADIO_CRC_1_BYTES, core.RADIO_CRC_2_BYTES) )
+                        _crclen := core.RADIO_CRC_1_BYTES
                 other:
                     ' are CRC checks enabled? (1 or 2)
                     ' if so, return TRUE
-                    return ( lookdown(_crclen: $10, $20) > 0 )
+                    return ( lookdown(_crclen: core.RADIO_CRC_1_BYTES, core.RADIO_CRC_2_BYTES) > 0 )
             cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
         LORA:
             case ||(state)
@@ -361,13 +382,12 @@ PUB crc_len(length=-2): curr_len
     case length
         0, 1, 2:
             _crclen := length << 4
+            cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
         other:
             return _crclen >> 4
 
-    cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
 
-
-PUB data_rate(rate=-2) | tmp
+PUB data_rate(rate=-2)
 ' Set data rate, in bps
 '   Valid values:
 '       GFSK/BLE:
@@ -376,58 +396,57 @@ PUB data_rate(rate=-2) | tmp
 '   NOTE: Bandwidth is set using rx_band()
     case rate
         2_000_000:
-            tmp.byte[0] := core.GFSK_BLE_BR_2_000_BW_2_4
+            _br_bw := GFSK_BLE_BR_2_000_BW_2_4
         1_600_000:
-            tmp.byte[0] := core.GFSK_BLE_BR_2_000_BW_2_4
+            _br_bw := GFSK_BLE_BR_2_000_BW_2_4
         1_000_000:
             case _bw
                 2_400_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_1_000_BW_2_4
+                    _br_bw := GFSK_BLE_BR_1_000_BW_2_4
                 1_200_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_1_000_BW_1_2
+                    _br_bw := GFSK_BLE_BR_1_000_BW_1_2
                 other:
                     return
         800_000:
             case _bw
                 2_400_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_0_800_BW_2_4
+                    _br_bw := GFSK_BLE_BR_0_800_BW_2_4
                 1_200_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_0_800_BW_1_2
+                    _br_bw := GFSK_BLE_BR_0_800_BW_1_2
                 other:
                     return
         500_000:
             case _bw
                 1_200_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_0_500_BW_1_2
+                    _br_bw := GFSK_BLE_BR_0_500_BW_1_2
                 600_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_0_500_BW_0_6
+                    _br_bw := GFSK_BLE_BR_0_500_BW_0_6
                 other:
                     return
         400_000:
             case _bw
                 1_200_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_0_400_BW_1_2
+                    _br_bw := GFSK_BLE_BR_0_400_BW_1_2
                 600_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_0_400_BW_0_6
+                    _br_bw := GFSK_BLE_BR_0_400_BW_0_6
                 other:
                     return
         250_000:
             case _bw
                 600_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_0_250_BW_0_6
+                    _br_bw := GFSK_BLE_BR_0_250_BW_0_6
                 300_000:
-                    tmp.byte[0] := core.GFSK_BLE_BR_0_250_BW_0_3
+                    _br_bw := GFSK_BLE_BR_0_250_BW_0_3
                 other:
                     return
         125_000:
-            tmp.byte[0] := core.GFSK_BLE_BR_0_125_BW_0_3
+            _br_bw := GFSK_BLE_BR_0_125_BW_0_3
         other:
             return _rate
 
     _rate := rate
-    tmp.byte[1] := _modidx
-    tmp.byte[2] := _mod_bwt
-    cmd(core.SET_MODPARAMS, @tmp, 3)
+
+    cmd(core.SET_MODPARAMS, @_mod_bwt, 3)
 
 
 PUB data_whiten_ena(state=-2): curr_state
@@ -437,11 +456,10 @@ PUB data_whiten_ena(state=-2): curr_state
     case ||(state)
         0, 1:
             _data_whiten := lookupz(||(state): $08, $00)
+            cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
         other:
             ' negate lookdown result, so 1 becomes -1 (TRUE)
             return -lookdown(_data_whiten: $08, $00)
-
-    cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
 
 
 PUB fifo_rx_base_ptr(rxp=-2)
@@ -517,6 +535,7 @@ PUB gpio1(mask=-2): curr_mask
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
             _gpio1mask := mask
+            cmd(core.SET_DIOIRQPARAMS, @_gpio3mask, 8)
         other:
             return _gpio1mask
 
@@ -546,6 +565,7 @@ PUB gpio2(mask=-2): curr_mask
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
             _gpio2mask := mask
+            cmd(core.SET_DIOIRQPARAMS, @_gpio3mask, 8)
         other:
             return _gpio2mask
 
@@ -575,6 +595,7 @@ PUB gpio3(mask=-2): curr_mask
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
             _gpio3mask := mask
+            cmd(core.SET_DIOIRQPARAMS, @_gpio3mask, 8)
         other:
             return _gpio3mask
 
@@ -585,7 +606,7 @@ PUB idle() | tmp
     cmd(core.SET_STDBY, @tmp, 1)
 
 
-PUB int_clear(mask)
+PUB int_clear(mask=$ffff)
 ' Clear interrupts
 '   Valid values:
 '       Bit Desc.                           Valid when modulation() is:
@@ -637,7 +658,7 @@ PUB interrupt(): int_src
     cmd(core.GET_IRQSTATUS, 0, 0, @int_src, 2)
 
 
-PUB int_mask(mask=-2): curr_mask | tmp[2]
+PUB int_mask(mask=-2): curr_mask
 ' Set interrupt mask
 '   Valid values:
 '       Bit Desc.                           Valid when modulation() is:
@@ -658,15 +679,10 @@ PUB int_mask(mask=-2): curr_mask | tmp[2]
 '       2   Syncword valid                  GFSK, BLE, FLRC
 '       1   RX complete                     GFSK, BLE, FLRC, LORA
 '       0   TX complete                     GFSK, BLE, FLRC, LORA
-    longfill(@tmp, 0, 2)
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
             _intmask := mask
-            tmp.word[3] := mask
-            tmp.word[2] := _gpio1mask
-            tmp.word[1] := _gpio2mask
-            tmp.word[0] := _gpio3mask
-            cmd(core.SET_DIOIRQPARAMS, @tmp, 8)
+            cmd(core.SET_DIOIRQPARAMS, @_gpio3mask, 8)
         other:
             return _intmask
 
@@ -679,11 +695,10 @@ PUB iq_inv(state=-2): curr_state
     case ||(state)
         0, 1:
             _lora_iqswap := lookdownz(||(state): core.LORA_IQ_STD, core.LORA_IQ_INVERTED)
+            cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
         other:
             curr_state := _lora_iqswap
             return ( lookupz(curr_state: core.LORA_IQ_STD, core.LORA_IQ_INVERTED) == 1 )
-
-    cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
 
 
 PUB last_pkt_len(): nr_bytes
@@ -722,6 +737,7 @@ PUB mod_idx(idx=-2): curr_idx
     case idx
         0_35..4_00:
             _modidx := (idx/25)-1
+            cmd(core.SET_MODPARAMS, @_mod_bwt, 3)
         other:
             if ( _modidx == 0 )
                 return 0_35
@@ -792,7 +808,7 @@ PUB payld_len(length=-2): curr_len
                     _paylen := length
                 other:
                     return _paylen
-            cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
+            cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
         LORA:
             case length
                 0..255:
@@ -815,7 +831,7 @@ PUB payld_len_cfg(mode=-2): curr_mode
                     _pktlencfg := mode
                 other:
                     return _pktlencfg
-            cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
+            cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
         LORA:
             case mode
                 PKTLEN_FIXED:
@@ -859,15 +875,15 @@ PUB preamble_len(len=-2): curr_len | mant, exp, len_calc
             case len
                 4, 8, 12, 16, 20, 24, 28, 32:
                     _preamble_len := lookdownz(len: 4, 8, 12, 16, 20, 24, 28, 32) << 4
+                    cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
                 other:
                     curr_len := _preamble_len >> 4
                     return lookupz(curr_len: 4, 8, 12, 16, 20, 24, 28, 32)
-            cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
         LORA:
             case len
                 2..491_520:
-                    if ( len // 2 )
-                        return                  ' must be an even number
+                    if ( len // 2 )             ' must be an even number; round up
+                        len++
                     mant := exp := 1
                     ' find closest matching mantissa/exponent to pre. length
                     repeat exp from 1 to 15
@@ -878,11 +894,11 @@ PUB preamble_len(len=-2): curr_len | mant, exp, len_calc
                         if ( len_calc => len )
                             quit
                     _lora_preamble := ( (exp << 4) | mant )
+                    cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
                 other:
                     exp := (_lora_preamble >> 4) & $f
                     mant := _lora_preamble & $f
                     return mant * (1 << exp)
-            cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
 
 
 PUB pa_ramp_time(rtime=-2): curr_rtime
@@ -896,6 +912,7 @@ PUB pa_ramp_time(rtime=-2): curr_rtime
         20, 16, 12, 10, 8, 6, 4, 2:
             _pa_ramp_time := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
             _pa_ramp_time <<= 5
+            cmd(core.SET_TXPARAMS, @_pa_ramp_time, 2)
         other:
             curr_rtime := _pa_ramp_time >> 5
             return lookupz(curr_rtime: 2, 4, 6, 8, 10, 12, 16, 20)
@@ -933,10 +950,51 @@ PUB rx_bw(bw=-2): curr_bw
     case modulation()
         GFSK:
             case bw
-                300_000, 600_000, 1_200_000, 2_400_000:
-                    _bw := bw
+                300_000:
+                    case _rate
+                        125_000:
+                            _bw := core.GFSK_BLE_BR_0_125_BW_0_3
+                        250_000:
+                            _bw := core.GFSK_BLE_BR_0_250_BW_0_3
+                        other:
+                            _bw := core.GFSK_BLE_BR_0_125_BW_0_3
+                600_000:
+                    case _rate
+                        250_000:
+                            _bw := core.GFSK_BLE_BR_0_250_BW_0_6
+                        400_000:
+                            _bw := core.GFSK_BLE_BR_0_400_BW_0_6
+                        500_000:
+                            _bw := core.GFSK_BLE_BR_0_500_BW_0_6
+                        other:
+                            _bw := core.GFSK_BLE_BR_0_250_BW_0_6
+                1_200_000:
+                    case _rate
+                        400_000:
+                            _bw := core.GFSK_BLE_BR_0_400_BW_1_2
+                        500_000:
+                            _bw := core.GFSK_BLE_BR_0_500_BW_1_2
+                        800_000:
+                            _bw := core.GFSK_BLE_BR_0_800_BW_1_2
+                        1_000_000:
+                            _bw := core.GFSK_BLE_BR_1_000_BW_1_2
+                        other:
+                            _bw := core.GFSK_BLE_BR_0_400_BW_1_2
+                2_400_000:
+                    case _rate
+                        800_000:
+                            _bw := core.GFSK_BLE_BR_0_800_BW_2_4
+                        1_000_000:
+                            _bw := core.GFSK_BLE_BR_1_000_BW_2_4
+                        1_600_000:
+                            _bw := core.GFSK_BLE_BR_1_600_BW_2_4
+                        2_000_000:
+                            _bw := core.GFSK_BLE_BR_2_000_BW_2_4
+                        other:
+                            _bw := core.GFSK_BLE_BR_0_800_BW_2_4
                 other:
                     return _bw
+            cmd(core.SET_MODPARAMS, @_bitrate_bw, 3)
         LORA:
             case bw
                 203_125, 406_250, 812_500, 1_625_000:
@@ -960,6 +1018,7 @@ PUB rx_buff_status(): stat
 
 PUB rx_mode() | tmp
 ' Change chip state to receive
+    int_clear()                                 ' clear interrupts
     tmp := 0                                    ' no timeout - stay in RX until
     cmd(core.SET_RX, @tmp, 3)                   ' packet is received
 
@@ -1035,10 +1094,9 @@ PUB syncwd_len(length=-2): curr_len
     case length
         1..5:
             _syncwd_len := lookup(length: $00, $02, $04, $06, $08)
+            cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
         other:
             return lookdown(_syncwd_len: 1..5)
-
-    cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
 
 
 PUB syncwd_mode(mode=-2): curr_mode
@@ -1057,10 +1115,9 @@ PUB syncwd_mode(mode=-2): curr_mode
     case mode
         SWD_DISABLE, SWD1, SWD2, SWD1_2, SWD3, SWD1_3, SWD2_3, SWD1_2_3:
             _syncwd_mode := mode
+            cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
         other:
             return _syncwd_mode
-
-    cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
 
 
 PUB test_cont_preamble()
@@ -1083,6 +1140,7 @@ PUB test_fs()
 
 PUB tx_mode() | tmp
 ' Change chip state to transmit
+    int_clear()                                 ' clear interrupts
     tmp := 0                                    ' no timeout, stay in TX until
     cmd(core.SET_TX, @tmp, 3)                   ' packet is transmitted
 
@@ -1109,17 +1167,16 @@ PUB tx_pwr(pwr=-255): curr_pwr
 '   Any other value returns the current (cached) setting
     case pwr
         -18..13:
-            pwr.byte[0] := pwr+18
-            pwr.byte[1] := _pa_ramp_time
-            cmd(core.SET_TXPARAMS, @pwr, 2)
-            _txpwr := pwr.byte[0]
+            _txpwr := pwr + 18
+            cmd(core.SET_TXPARAMS, @_txpwr, 2)
         other:
             return _txpwr-18
 
 
-PRI cmd(cmd_val, ptr_params=0, nr_params=0, ptr_resp=0, sz_resp=0) | cmd_pkt
+PRI cmd(cmd_val, ptr_params=0, nr_params=0, ptr_resp=0, sz_resp=0) | cmd_pkt, b
 ' Send command to device
-    repeat until not busy
+    repeat
+    until not busy()
     case cmd_val
         core.GET_STATUS:
             outa[_CS] := 0
@@ -1127,81 +1184,40 @@ PRI cmd(cmd_val, ptr_params=0, nr_params=0, ptr_resp=0, sz_resp=0) | cmd_pkt
                 _status := spi.rd_byte()
             outa[_CS] := 1
             return
-        $00, $03, $C1, $C5, $D1, $D2, $D5: ' 0
+        core.GET_IRQSTATUS:
             outa[_CS] := 0
                 spi.wr_byte(cmd_val)
-            outa[_CS] := 1
-            return
-        core.GET_PKTSTATUS, core.GET_RXBUFFSTATUS:
-            cmd_pkt.byte[0] := cmd_val
-            cmd_pkt.byte[1] := core.NOOP
-            outa[_CS] := 0
-                spi.wrblock_lsbf(@cmd_pkt, 2)
-                spi.rdblock_lsbf(ptr_resp, sz_resp)
-            outa[_CS] := 1
-            return
-        core.GET_IRQSTATUS:
-            cmd_pkt.byte[0] := core.GET_IRQSTATUS
-            cmd_pkt.byte[1] := core.NOOP
-            outa[_CS] := 0
-                spi.wrblock_lsbf(@cmd_pkt, 2)
+                _status := spi.rd_byte()
                 spi.rdblock_msbf(ptr_resp, 2)
             outa[_CS] := 1
             return
-        core.CLR_IRQSTATUS:
+        core.GET_PKTSTATUS, core.GET_RXBUFFSTATUS, core.GET_RSSIINST, core.GET_PKTTYPE:
             outa[_CS] := 0
                 spi.wr_byte(cmd_val)
-                spi.wrblock_msbf(ptr_params, 2)
+                _status := spi.rd_byte()
+                spi.rdblock_lsbf(ptr_resp, sz_resp)
             outa[_CS] := 1
             return
-        core.GET_RSSIINST:
-            cmd_pkt.byte[0] := core.GET_RSSIINST
-            cmd_pkt.byte[1] := core.NOOP
-            outa[_CS] := 0
-                spi.wrblock_lsbf(@cmd_pkt, 2)
-                spi.rdblock_lsbf(ptr_resp, 1)
-            outa[_CS] := 1
-            return
-        $1B, $84, $80, $8A, $96, $98, $9B, $9D, $9E, $A3: ' 1
-        $1A, $8E: ' 2
-        core.SET_BUFF_BASEADDR:
+        core.SET_TX, core.SET_RX, core.SET_RFFREQ, core.SET_TXPARAMS, core.SET_BUFF_BASEADDR, ...
+        core.SET_MODPARAMS, core.SET_PKTPARAMS, core.SET_DIOIRQPARAMS, core.CLR_IRQSTATUS, ...
+        core.SET_PKTTYPE, core.SET_SLEEP, core.SET_STDBY:
             outa[_CS] := 0
                 spi.wr_byte(cmd_val)
-                spi.wrblock_lsbf(ptr_params, 2)
+                spi.wrblock_msbf(ptr_params, nr_params)
             outa[_CS] := 1
             return
-        $83, $82, $86, $88: ' 3
-        core.SET_MODPARAMS:
+        core.SET_FS, core.SET_CAD, core.SET_TXCW, core.SET_TXCONT_PREAMBLE, core.SET_SAVECONTEXT:
             outa[_CS] := 0
                 spi.wr_byte(cmd_val)
-                spi.wrblock_lsbf(ptr_params, 3)
             outa[_CS] := 1
-            return
-        $94: ' 6
-        core.SET_PKTPARAMS: ' 7
-            outa[_CS] := 0
-                spi.wr_byte(cmd_val)
-                spi.wrblock_lsbf(ptr_params, nr_params)
-            outa[_CS] := 1
-            return
-        core.SET_DIOIRQPARAMS: ' 8
-            outa[_CS] := 0
-                spi.wr_byte(cmd_val)
-                spi.wrblock_msbf(ptr_params, 8)
-            outa[_CS] := 1
-            return
-        other:
             return
 
-    outa[_CS] := 0
-        spi.wr_byte(cmd_val)
-        spi.wrblock_msbf(ptr_params, nr_params)
-    outa[_CS] := 1
+        other:
+            return
 
 
 PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
 ' Read nr_bytes from register 'reg' to address 'ptr_buff'
-
     case reg
         0..$FFFF:
             cmd_pkt.byte[0] := core.READREG
@@ -1215,8 +1231,6 @@ PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
                 spi.wrblock_lsbf(@cmd_pkt, 4)
                 spi.rdblock_lsbf(ptr_buff, nr_bytes)
             outa[_CS] := 1
-    repeat
-    until not busy()
 
 
 PRI writereg(reg_nr, nr_bytes, ptr_buff) | i
@@ -1233,7 +1247,7 @@ PRI writereg(reg_nr, nr_bytes, ptr_buff) | i
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

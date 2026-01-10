@@ -4,8 +4,8 @@
     Description:    SX1280-specific constants
     Author:         Jesse Burt
     Started:        Feb 14, 2020
-    Updated:        Oct 14, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jan 10, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -17,7 +17,7 @@ CON
 
 ' Commands
     NOOP                        = $00
-    GETPKTTYPE                  = $03
+    GET_PKTTYPE                 = $03
 
     GET_IRQSTATUS               = $15
     GET_RXBUFFSTATUS            = $17
@@ -44,6 +44,7 @@ CON
     SET_RXDUTYCYCLE             = $94
     SET_REGULATORMODE           = $96
     CLR_IRQSTATUS               = $97
+    SET_AUTOTX                  = $98
     SET_LONGPREAMBLE            = $9B
     SET_PERFCTRMODE             = $9C
     SET_UARTSPEED               = $9D
@@ -59,7 +60,7 @@ CON
     SET_TXCONT_PREAMBLE         = $D2
     SET_SAVECONTEXT             = $D5
 
-' Symbols
+' SetModulationParams
     GFSK_BLE_BR_2_000_BW_2_4    = $04
     GFSK_BLE_BR_1_600_BW_2_4    = $28
     GFSK_BLE_BR_1_000_BW_2_4    = $4C
@@ -95,6 +96,7 @@ CON
     BT_1_0                      = $10
     BT_0_5                      = $20
 
+' SetPacketParams
     PREAMBLE_LEN_04_BITS        = $00
     PREAMBLE_LEN_08_BITS        = $10
     PREAMBLE_LEN_12_BITS        = $20
@@ -110,24 +112,35 @@ CON
     SYNC_WORD_LEN_4_B           = $06
     SYNC_WORD_LEN_5_B           = $08
 
-    RX_MATCH_SYNCWD_OFF         = $00
-    RX_MATCH_SYNCWD_1           = $00
-    RX_MATCH_SYNCWD_2           = $00
-    RX_MATCH_SYNCWD_1_2         = $00
-    RX_MATCH_SYNCWD_3           = $00
-    RX_MATCH_SYNCWD_1_3         = $00
-    RX_MATCH_SYNCWD_2_3         = $00
-    RX_MATCH_SYNCWD_1_2_3       = $00
+    RADIO_SELECT_SYNCWORD_OFF   = $00
+    RADIO_SELECT_SYNCWORD_1     = $10
+    RADIO_SELECT_SYNCWORD_2     = $20
+    RADIO_SELECT_SYNCWORD_1_2   = $30
+    RADIO_SELECT_SYNCWORD_3     = $40
+    RADIO_SELECT_SYNCWORD_1_3   = $50
+    RADIO_SELECT_SYNCWORD_2_3   = $60
+    RADIO_SELECT_SYNCWORD_1_2_3 = $70
 
-    PKT_FIXED_LEN               = $00
-    PKT_VAR_LEN                 = $20
+    RADIO_PACKET_FIXED_LEN      = $00
+    RADIO_PACKET_VARIABLE_LEN   = $20
 
-    CRC_OFF                     = $00
-    CRC_1_BYTES                 = $10
-    CRC_2_BYTES                 = $20
+    RADIO_CRC_OFF               = $00
+    RADIO_CRC_1_BYTES           = $10
+    RADIO_CRC_2_BYTES           = $20
 
-    WHITE_ENA                   = $00
-    WHITE_DIS                   = $08
+    WHITENING_ENABLE            = $00
+    WHITENING_DISABLE           = $08
+
+    ' SetTxParams
+    RADIO_RAMP_02_US            = $00
+    RADIO_RAMP_04_US            = $20
+    RADIO_RAMP_06_US            = $40
+    RADIO_RAMP_08_US            = $60
+    RADIO_RAMP_10_US            = $80
+    RADIO_RAMP_12_US            = $A0
+    RADIO_RAMP_16_US            = $C0
+    RADIO_RAMP_20_US            = $E0
+
 
 ' Registers
     FIRMWARE_MSB                = $0153
@@ -208,7 +221,7 @@ PUB null()
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

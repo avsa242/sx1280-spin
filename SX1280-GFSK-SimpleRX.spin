@@ -5,8 +5,8 @@
         * GFSK modulation
     Author:         Jesse Burt
     Started:        Apr 18, 2021
-    Updated:        Oct 14, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jan 10, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -43,7 +43,7 @@ PUB main() | sz
         radio.rx_mode()                         ' setup for reception
         ' wait for data to be received
         repeat
-        until radio.payld_rdy()
+        until radio.interrupt() & radio.RXDONE
 
         ' clear the temporary buffer and read the payload in from the radio
         bytefill(@_rxbuff, 0, radio.PAYLD_LEN_MAX)
@@ -52,7 +52,7 @@ PUB main() | sz
 
         ' show what was received
         ser.pos_xy(0, 3)
-        ser.printf1(@"Received %d bytes:\n\r", sz)
+        ser.printf(@"Received %d bytes:\n\r", sz)
         ser.hexdump(@_rxbuff, 0, 4, sz, 16 <# sz)
 
         radio.int_clear(radio.RXDONE)
@@ -74,7 +74,7 @@ PUB setup()
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
