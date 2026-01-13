@@ -396,9 +396,8 @@ PUB data_rate(rate=-2)
 ' Set data rate, in bps
 '   Valid values:
 '       GFSK/BLE:
-'       125_000, 250_000, 400_000, 500_000, 800_000, 1_000_000,
-'       1_600_000, 2_000_000
-'   NOTE: Bandwidth is set using rx_band()
+'       125_000, 250_000, 400_000, 500_000, 800_000, 1_000_000, 1_600_000, 2_000_000
+'   NOTE: Bandwidth is set using rx_bw()
     case rate
         2_000_000:
             _br_bw := GFSK_BLE_BR_2_000_BW_2_4
@@ -720,9 +719,8 @@ PUB modulation(mode=-2)
 '       RANGING (2)
 '       FLRC (3)
 '       BLE (4)
-'   NOTE: This setting must be configured before any others, as no
-'   existing settings are preserved when this setting is changed, and
-'   some settings have a modulation-specific meaning
+'   NOTE: This setting must be configured before any others, as no existing settings are preserved
+'   when this setting is changed, and some settings have a modulation-specific meaning
     case mode
         GFSK, LORA, RANGING, FLRC, BLE:
             _modulation := mode
@@ -738,7 +736,6 @@ PUB mod_idx(idx=-2): curr_idx
 '       0_35 (=0.35), 0_50..4_00 (=4.00), in increments of 0_25
 '   Any other value returns the current (cached) setting
 '   NOTE: For use when modulation() == GFSK
-'   NOTE: Cached setting - commit to transceiver using DataRate()
     case idx
         0_35..4_00:
             _modidx := (idx/25)-1
@@ -854,9 +851,8 @@ PUB payld_len_cfg(mode=-2): curr_mode
 PUB payld_rdy(): flag
 ' Flag indicating payload ready/received
 '   Returns: TRUE (-1) or FALSE (0)
-'   NOTE: Applies when modulation() == BLE, GFSK, FLRC
-'   When modulation() == LORA, set IntMask() to RXDONE and check
-'       Interrupt() & RXDONE
+'   NOTE: Applies when modulation() == BLE, GFSK, or FLRC
+'   When modulation() == LORA, set int_mask() to RXDONE and check interrupt() & RXDONE
     pkt_status(@_pktstatus)
     return ( (_pktstatus[2] & PSTAT_PAYLDRDY) <> 0 )
 
@@ -865,8 +861,7 @@ PUB payld_sent(): flag
 ' Flag indicating payload sent
 '   Returns: TRUE (-1) or FALSE (0)
 '   NOTE: Applies when modulation() == BLE, GFSK, FLRC
-'   When modulation() == LORA, set IntMask() to TXDONE and check
-'       Interrupt() & TXDONE
+'   When modulation() == LORA, set int_mask() to TXDONE and check interrupt() & TXDONE
     pkt_status(@_pktstatus)
     return ( (_pktstatus[3] & PSTAT_PAYLDSENT) <> 0 )
 
@@ -909,10 +904,8 @@ PUB preamble_len(len=-2): curr_len | mant, exp, len_calc
 PUB pa_ramp_time(rtime=-2): curr_rtime
 ' Set power amplifier rise/fall time of ramp up/down, in microseconds
 '   Valid values:
-'       *20, 16, 12, 10, 8, 6, 4, 2
+'       20, 16, 12, 10, 8, 6, 4, 2 (default: 20)
 '   Any other returns the current (cached) setting
-'   NOTE: This setting is only cached in MCU RAM - to actually commit it to the transceiver,
-'       call tx_pwr()
     case rtime
         20, 16, 12, 10, 8, 6, 4, 2:
             _pa_ramp_time := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
@@ -950,8 +943,6 @@ PUB rx_bw(bw=-2): curr_bw
 '       GFSK            300_000, 600_000, 1_200_000, 2_400_000
 '       LORA            203_125, 406_250, 812_500, 1_625_000
 '   Any other value returns the current (cached) setting
-'   NOTE: This setting is only cached in MCU RAM - to actually commit it to the transceiver,
-'       call data_rate()
     case modulation()
         GFSK:
             case bw
