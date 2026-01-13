@@ -4,7 +4,7 @@
     Description:    Driver for the SX1280 2.4GHz transceiver
     Author:         Jesse Burt
     Started:        Feb 14, 2020
-    Updated:        Jan 10, 2026
+    Updated:        Jan 13, 2026
     Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -101,8 +101,7 @@ VAR
     ' PACKETPARAMS
     byte _data_whiten, _crclen, _paylen, _pktlencfg, _syncwd_mode, _syncwd_len, _preamble_len
 
-    byte _lora_preamble, _lora_pktlencfg, _lora_paylen, _lora_crclen'xxx
-    byte _lora_iqswap
+    byte _lora_iqswap, _lora_crclen, _lora_paylen, _lora_pktlencfg, _lora_preamble
 
     ' GET_RXBUFFSTATUS
     byte _lastrx_paylen, _rxbuff_stptr'xxx
@@ -214,12 +213,18 @@ PUB preset_lora()
     _lora_sf := core.LORA_SF_12
     _lora_bw := core.LORA_BW_800
     _lora_cr := core.LORA_CR_4_5
+    cmd(core.SET_MODPARAMS, @_lora_sr, 3)
+
     _lora_preamble := (core.LORA_PBLE_LEN_EXP_DEF << 4) | core.LORA_PBLE_LEN_MANT_DEF
     _lora_paylen := 255
     _lora_pktlencfg := core.EXPLICIT_HEADER
     _lora_crclen := core.LORA_CRC_ENABLE
     _lora_iqswap := core.LORA_IQ_STD
-    _pa_ramp_time := core.RADIO_RAMP_20_US
+    cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
+
+    _txpwr := -18 + 18                          ' -18dBm
+    _pa_ramp_time := core.RADIO_RAMP_20_US      ' 20uS
+    cmd(core.SET_TXPARAMS, @_pa_ramp_time, 2)
 
 
 PUB preset_dr0()
@@ -370,9 +375,9 @@ PUB crc_check_ena(state=-2): curr_state
             case ||(state)
                 0, 1:
                     _lora_crclen := lookdown(||(state): $00, $20)
+                    cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
                 other:
                     return ( lookdown(_lora_crclen: $00, $20) == 1 )
-            cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
 
 
 PUB crc_len(length=-2): curr_len
@@ -695,7 +700,7 @@ PUB iq_inv(state=-2): curr_state
     case ||(state)
         0, 1:
             _lora_iqswap := lookdownz(||(state): core.LORA_IQ_STD, core.LORA_IQ_INVERTED)
-            cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
+            cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
         other:
             curr_state := _lora_iqswap
             return ( lookupz(curr_state: core.LORA_IQ_STD, core.LORA_IQ_INVERTED) == 1 )
@@ -806,16 +811,16 @@ PUB payld_len(length=-2): curr_len
             case length
                 0..255:
                     _paylen := length
+                    cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
                 other:
                     return _paylen
-            cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
         LORA:
             case length
                 0..255:
                     _lora_paylen := length
+                    cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
                 other:
                     return _lora_paylen
-            cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
 
 
 PUB payld_len_cfg(mode=-2): curr_mode
@@ -843,7 +848,7 @@ PUB payld_len_cfg(mode=-2): curr_mode
                     else
                         return PKTLEN_FIXED
             _lora_pktlencfg := mode
-            cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
+            cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
 
 
 PUB payld_rdy(): flag
@@ -894,7 +899,7 @@ PUB preamble_len(len=-2): curr_len | mant, exp, len_calc
                         if ( len_calc => len )
                             quit
                     _lora_preamble := ( (exp << 4) | mant )
-                    cmd(core.SET_PKTPARAMS, @_lora_preamble, 5)
+                    cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
                 other:
                     exp := (_lora_preamble >> 4) & $f
                     mant := _lora_preamble & $f
@@ -1000,10 +1005,10 @@ PUB rx_bw(bw=-2): curr_bw
                 203_125, 406_250, 812_500, 1_625_000:
                     bw := lookdown(bw: 203_125, 406_250, 812_500, 1_625_000)
                     _lora_bw := lookup(bw: $34, $26, $18, $0A)
+                    cmd(core.SET_MODPARAMS, @_lora_sf, 3)
                 other:
                     curr_bw := lookdown(_lora_bw: $34, $26, $18, $0A)
                     return lookup(curr_bw: 203_125, 406_250, 812_500, 1_625_000)
-            cmd(core.SET_MODPARAMS, @_lora_sf, 3)
 
 
 PUB rx_buff_status(): stat
