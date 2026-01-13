@@ -213,7 +213,7 @@ PUB preset_lora()
     _lora_sf := core.LORA_SF_12
     _lora_bw := core.LORA_BW_800
     _lora_cr := core.LORA_CR_4_5
-    cmd(core.SET_MODPARAMS, @_lora_sr, 3)
+    cmd(core.SET_MODPARAMS, @_lora_cr, 3)
 
     _lora_preamble := (core.LORA_PBLE_LEN_EXP_DEF << 4) | core.LORA_PBLE_LEN_MANT_DEF
     _lora_paylen := 255
@@ -990,7 +990,7 @@ PUB rx_bw(bw=-2): curr_bw
                             _bw := core.GFSK_BLE_BR_0_800_BW_2_4
                 other:
                     return _bw
-            cmd(core.SET_MODPARAMS, @_bitrate_bw, 3)
+            cmd(core.SET_MODPARAMS, @_br_bw, 3)
         LORA:
             case bw
                 203_125, 406_250, 812_500, 1_625_000:
