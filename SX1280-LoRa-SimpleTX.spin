@@ -5,8 +5,8 @@
         * LoRa modulation
     Author:         Jesse Burt
     Started:        Apr 18, 2021
-    Updated:        Oct 14, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jan 17, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -32,15 +32,15 @@ VAR
 PUB main() | count, sz, user_str
 
     setup()
+    radio.preset_dr7()                          ' LoRa presets (DR0..7)
 
     ' user-modifiable string to send over the air
     ' NOTE: the format should match the parameters in the sprintf() call below
     user_str := @"This is message # $%04.4x"
 
-    radio.modulation(radio.LORA)
+
     radio.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
-    radio.preset_dr7()                          ' LoRa presets (DR0..7)
     radio.tx_pwr(-18)                           ' -18..13 dBm
 
     radio.int_mask(radio.TXDONE)                ' set 'transmit done' interrupt
@@ -58,7 +58,7 @@ PUB main() | count, sz, user_str
 
         ' show what will be transmitted
         ser.pos_xy(0, 3)
-        ser.printf1(@"Transmitting %d bytes:\n\r", sz)
+        ser.printf(@"Transmitting %d bytes (TX power: %4.4ddBm):\n\r", sz, radio.tx_pwr() )
         ser.hexdump(@_txbuff, 0, 4, sz, 16 <# sz)
 
         ' queue and transmit it
@@ -88,7 +88,7 @@ PUB setup()
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

@@ -4,7 +4,7 @@
     Description:    Driver for the SX1280 2.4GHz transceiver
     Author:         Jesse Burt
     Started:        Feb 14, 2020
-    Updated:        Jan 13, 2026
+    Updated:        Jan 17, 2026
     Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -112,8 +112,8 @@ VAR
     byte _status, _pktstatus[5]'xxx
 
     ' SET_MODPARAMS
-    byte _mod_bwt, _modidx, _br_bw
-    byte _lora_cr, _lora_bw, _lora_sf
+    byte _mod_bwt, _modidx, _br_bw              ' GFSK
+    byte _lora_cr, _lora_bw, _lora_sf           ' LoRa
 
 
 OBJ
@@ -210,6 +210,8 @@ PUB preset_lora()
 '   variable-length packets
 '   CRC enabled
 '   I/Q standard
+    modulation(LORA)                            ' switch to idle/standby and set to LoRa modulation
+
     _lora_sf := core.LORA_SF_12
     _lora_bw := core.LORA_BW_800
     _lora_cr := core.LORA_CR_4_5
@@ -344,7 +346,7 @@ PUB code_rate(rate=-2): curr_rate
         $04_05..$04_08, $14_05, $14_06, $14_08:
             rate := lookdown(rate: $04_05, $04_06, $04_07, $04_08, $14_05, $14_06, $14_08)
             _lora_cr := rate
-            cmd(core.SET_MODPARAMS, @_lora_sf, 3) ' set 3 params: SF, BW, CR
+            cmd(core.SET_MODPARAMS, @_lora_cr, 3) ' set 3 params: SF, BW, CR
         other:
             curr_rate := _lora_cr
             return lookup(rate: $04_05, $04_06, $04_07, $04_08, $14_05, $14_06, $14_08)
@@ -996,7 +998,7 @@ PUB rx_bw(bw=-2): curr_bw
                 203_125, 406_250, 812_500, 1_625_000:
                     bw := lookdown(bw: 203_125, 406_250, 812_500, 1_625_000)
                     _lora_bw := lookup(bw: $34, $26, $18, $0A)
-                    cmd(core.SET_MODPARAMS, @_lora_sf, 3)
+                    cmd(core.SET_MODPARAMS, @_lora_cr, 3)
                 other:
                     curr_bw := lookdown(_lora_bw: $34, $26, $18, $0A)
                     return lookup(curr_bw: 203_125, 406_250, 812_500, 1_625_000)
@@ -1065,7 +1067,7 @@ PUB spread_fact(sf=-2): curr_sf | tmp
             return _lora_sf >> 4
 
     _lora_sf := sf << 4
-    cmd(core.SET_MODPARAMS, @_lora_sf, 3)       ' set 3 params: SF, BW, CR
+    cmd(core.SET_MODPARAMS, @_lora_cr, 3)       ' set 3 params: SF, BW, CR
     writereg(core.SF, 1, @tmp)
     tmp := 1
     writereg(core.FREQERRCOMP, 1, @tmp)
@@ -1207,7 +1209,6 @@ PRI cmd(cmd_val, ptr_params=0, nr_params=0, ptr_resp=0, sz_resp=0) | cmd_pkt, b
                 spi.wr_byte(cmd_val)
             outa[_CS] := 1
             return
-
         other:
             return
 

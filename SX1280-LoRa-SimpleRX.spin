@@ -5,8 +5,8 @@
         * LoRa modulation
     Author:         Jesse Burt
     Started:        Apr 18, 2021
-    Updated:        Oct 14, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jan 17, 2026
+    Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -31,11 +31,9 @@ VAR
 PUB main() | sz
 
     setup()
-    radio.modulation(radio.LORA)
-    radio.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
-
     radio.preset_dr7()                          ' LoRa presets (DR0..7)
-    radio.payld_len(255)                        ' max. accepted size (1..255)
+
+    radio.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
     radio.int_mask(radio.RXDONE)                ' set 'receive done' interrupt
     radio.int_clear(radio.RXDONE)               ' and make sure it starts clear
@@ -54,7 +52,7 @@ PUB main() | sz
 
         ' show what was received
         ser.pos_xy(0, 3)
-        ser.printf1(@"Received %d bytes:\n\r", sz)
+        ser.printf(@"Received %d bytes (RSSI=%4.4d):\n\r", sz, radio.rssi() )
         ser.hexdump(@_rxbuff, 0, 4, sz, 16 <# sz)
 
         radio.int_clear(radio.RXDONE)
@@ -76,7 +74,7 @@ PUB setup()
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2026 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
