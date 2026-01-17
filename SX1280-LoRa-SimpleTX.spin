@@ -38,7 +38,6 @@ PUB main() | count, sz, user_str
     ' NOTE: the format should match the parameters in the sprintf() call below
     user_str := @"This is message # $%04.4x"
 
-
     radio.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
     radio.tx_pwr(-18)                           ' -18..13 dBm

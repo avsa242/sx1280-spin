@@ -1,10 +1,10 @@
 {
 ----------------------------------------------------------------------------------------------------
-    Filename:       SX1280-GFSK-SimpleRX.spin
+    Filename:       SX1280-LoRa-SimpleRX.spin2
     Description:    Simple RX demo for the SX1280 driver
-        * GFSK modulation
+        * LoRa modulation
     Author:         Jesse Burt
-    Started:        Apr 18, 2021
+    Started:        Jan 17, 2026
     Updated:        Jan 17, 2026
     Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
@@ -12,14 +12,13 @@
 
 CON
 
-    _clkmode    = xtal1+pll16x
-    _xinfreq    = 5_000_000
+    _clkfreq    = 180_000_000
+    _xtlfreq    = 20_000_000
 
 
 OBJ
 
-    time:   "time"
-    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
     radio:  "wireless.transceiver.sx1280" | CS=0, SCK=1, MOSI=2, MISO=3, RST=4, BUSY_PIN=5
 
 
@@ -31,10 +30,9 @@ VAR
 PUB main() | sz
 
     setup()
-    radio.preset_gfsk_125k_0p3bw()              ' GFSK preset: 125kbps, 300kHz BW
+    radio.preset_dr7()                          ' LoRa presets (DR0..7)
 
     radio.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
-    radio.payld_len(255)                        ' max. accepted size (1..255)
 
     radio.int_mask(radio.RXDONE)                ' set 'receive done' interrupt
     radio.int_clear(radio.RXDONE)               ' and make sure it starts clear
@@ -53,7 +51,7 @@ PUB main() | sz
 
         ' show what was received
         ser.pos_xy(0, 3)
-        ser.printf(@"Received %d bytes:\n\r", sz)
+        ser.printf(@"Received %d bytes (RSSI=%4.4d):\n\r", sz, radio.rssi() )
         ser.hexdump(@_rxbuff, 0, 4, sz, 16 <# sz)
 
         radio.int_clear(radio.RXDONE)
@@ -62,7 +60,7 @@ PUB main() | sz
 PUB setup()
 
     ser.start()
-    time.msleep(30)
+    waitms(30)
     ser.clear()
     ser.strln(@"Serial terminal started")
 

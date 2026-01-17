@@ -5,7 +5,7 @@
         * GFSK modulation
     Author:         Jesse Burt
     Started:        Apr 18, 2021
-    Updated:        Jan 10, 2026
+    Updated:        Jan 17, 2026
     Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -32,12 +32,12 @@ VAR
 PUB main() | count, sz, user_str
 
     setup()
+    radio.preset_gfsk_125k_0p3bw()              ' GFSK preset: 125kbps, 300kHz BW
 
     ' user-modifiable string to send over the air
     ' NOTE: the format should match the parameters in the sprintf() call below
     user_str := @"This is message # $%04.4x"
 
-    radio.preset_gfsk_125k_0p3bw()              ' GFSK preset: 125kbps, 300kHz BW
     radio.carrier_freq(2_401_000)               ' 2_400_000..2_500_000 (kHz)
 
     radio.tx_pwr(-18)                           ' -18..13 dBm
