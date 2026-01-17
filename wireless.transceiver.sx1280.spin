@@ -86,34 +86,85 @@ CON
     F_RES               = round((float(OSC) / float(TWO_18)) * 1000.0)
 
 
+    ' command/parameters structures
+    GFSK_SetModulationParams_s(...
+        byte bandwidth_time, ...
+        byte modulation_idx, ...
+        byte bitrate_bandwidth)
+
+    LORA_SetModulationParams_s(...
+        byte code_rate, ...
+        byte bandwidth, ...
+        byte spread_factor)
+
+    GFSK_SetPacketParams_s(...
+        byte data_whitening, ...
+        byte crc_len, ...
+        byte payload_len, ...
+        byte packet_len_cfg, ...
+        byte syncword_mode, ...
+        byte syncword_len, ...
+        byte preamble_len)
+
+    LORA_SetPacketParams_s(...
+        byte invert_iq, ...
+        byte crc_len, ...
+        byte payload_len, ...
+        byte header_type, ...
+        byte preamble_len)
+
+    SetDioIrqParams_s(...
+        word dio3_mask, ...
+        word dio2_mask, ...
+        word dio1_mask, ...
+        word irq_mask)
+
+    SetTxParams_s(...
+        byte power, ...
+        byte ramp_time)
+
+    GetRxBufferStatus_s(...
+        byte rx_payload_len, ...
+        byte rx_start_buff_ptr)
+
+    SetBufferBaseAddress_s(...
+        byte tx_base_addr, ...
+        byte rx_base_addr)
+
+    GetPacketStatus_s(...
+        byte packet_sts[5])
+
+    radio_config_s(...
+        long bandwidth, ...
+        long frequency, ...
+        long modulation, ...
+        long opmode, ...
+        long data_rate)
+
+
 VAR
 
     long _CS, _RESET, _BUSY
-    long _bw, _freq, _modulation, _opmode
-    long _rate
+    byte _status
 
-    ' SET_DIOIRQPARAMS
-    word _gpio3mask, _gpio2mask, _gpio1mask, _intmask
+    radio_config_s              radio_config    ' driver state, cached settings
 
-    ' SET_TXPARAMS
-    byte _pa_ramp_time, _txpwr
+    ' SX1280 commands and parameters
+    GetPacketStatus_s           GET_PKTSTATUS
 
-    ' PACKETPARAMS
-    byte _data_whiten, _crclen, _paylen, _pktlencfg, _syncwd_mode, _syncwd_len, _preamble_len
+    SetDioIrqParams_s           SET_DIOIRQPARAMS
 
-    byte _lora_iqswap, _lora_crclen, _lora_paylen, _lora_pktlencfg, _lora_preamble
+    SetTxParams_s               SET_TXPARAMS
 
-    ' GET_RXBUFFSTATUS
-    byte _lastrx_paylen, _rxbuff_stptr'xxx
+    GFSK_SetPacketParams_s      GFSK_SET_PACKETPARAMS
+    LORA_SetPacketParams_s      LORA_SET_PACKETPARAMS
 
-    ' SET_BUFF_BASEADDR
-    byte _rxfifoptr, _txfifoptr
+    GetRxBufferStatus_s         GET_RXBUFFSTATUS
 
-    byte _status, _pktstatus[5]'xxx
+    SetBufferBaseAddress_s      SET_BUFF_BASEADDR
 
-    ' SET_MODPARAMS
-    byte _mod_bwt, _modidx, _br_bw              ' GFSK
-    byte _lora_cr, _lora_bw, _lora_sf           ' LoRa
+    GFSK_SetModulationParams_s  GFSK_SET_MODPARAMS
+    LORA_SetModulationParams_s  LORA_SET_MODPARAMS
 
 
 OBJ
@@ -175,30 +226,29 @@ PUB preset_gfsk_125k_0p3bw()
     modulation(GFSK)
 
     ' SET_MODPARAMS
-    _br_bw := core.GFSK_BLE_BR_0_125_BW_0_3
-    _modidx := core.MOD_IND_1_00
-    _mod_bwt := core.BT_0_5
-    cmd(core.SET_MODPARAMS, @_mod_bwt, 3)
-    _rate := 125_000
-    _bw := 300_000
+    GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_125_BW_0_3
+    GFSK_SET_MODPARAMS.modulation_idx :=    core.MOD_IND_1_00
+    GFSK_SET_MODPARAMS.bandwidth_time :=    core.BT_0_5
+    cmd(core.SET_MODPARAMS, @GFSK_SET_MODPARAMS.bandwidth_time, 3)
+    radio_config.data_rate := 125_000
+    radio_config.bandwidth := 300_000
 
-
-    ' SET_PKTPARAMS
-    _preamble_len := core.PREAMBLE_LEN_08_BITS  ' 8 bits
-    _syncwd_len := core.SYNC_WORD_LEN_5_B       ' 5 bytes
-    _syncwd_mode := SWD1                        ' match syncword # 1
-    _pktlencfg := PKTLEN_VAR                    ' variable length payloads
-    _paylen := 255                              ' max len=255
-    _crclen := core.RADIO_CRC_2_BYTES           ' 2-byte CRC
-    _data_whiten := core.WHITENING_DISABLE      ' disable data whitening
-    cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
+    ' SET_PACKETPARAMS
+    GFSK_SET_PACKETPARAMS.preamble_len :=   core.PREAMBLE_LEN_08_BITS   ' 8 bits
+    GFSK_SET_PACKETPARAMS.syncword_len :=   core.SYNC_WORD_LEN_5_B      ' 5 bytes
+    GFSK_SET_PACKETPARAMS.syncword_mode :=  SWD1                        ' match syncword # 1
+    GFSK_SET_PACKETPARAMS.packet_len_cfg := PKTLEN_VAR                  ' variable length payloads
+    GFSK_SET_PACKETPARAMS.payload_len :=    255                         ' max len=255
+    GFSK_SET_PACKETPARAMS.crc_len :=        core.RADIO_CRC_2_BYTES      ' 2-byte CRC
+    GFSK_SET_PACKETPARAMS.data_whitening := core.WHITENING_DISABLE      ' disable data whitening
+    cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
 
     set_syncwd( string($e7, $e6, $e5, $e4, $e3) )
 
     ' SET_TXPARAMS
-    _txpwr := -18 + 18                          ' -18dBm
-    _pa_ramp_time := core.RADIO_RAMP_20_US      ' 20uS
-    cmd(core.SET_TXPARAMS, @_pa_ramp_time, 2)
+    SET_TXPARAMS.power :=                   -18 + 18                    ' -18dBm
+    SET_TXPARAMS.ramp_time :=               core.RADIO_RAMP_20_US       ' 20uS
+    cmd(core.SET_TXPARAMS, @SET_TXPARAMS, 2)
 
 
 PUB preset_lora()
@@ -212,21 +262,22 @@ PUB preset_lora()
 '   I/Q standard
     modulation(LORA)                            ' switch to idle/standby and set to LoRa modulation
 
-    _lora_sf := core.LORA_SF_12
-    _lora_bw := core.LORA_BW_800
-    _lora_cr := core.LORA_CR_4_5
-    cmd(core.SET_MODPARAMS, @_lora_cr, 3)
+    LORA_SET_MODPARAMS.code_rate := core.LORA_CR_4_5
+    LORA_SET_MODPARAMS.bandwidth := core.LORA_BW_800
+    LORA_SET_MODPARAMS.spread_factor := core.LORA_SF_12
+    cmd(core.SET_MODPARAMS, @LORA_SET_MODPARAMS, 3)
 
-    _lora_preamble := (core.LORA_PBLE_LEN_EXP_DEF << 4) | core.LORA_PBLE_LEN_MANT_DEF
-    _lora_paylen := 255
-    _lora_pktlencfg := core.EXPLICIT_HEADER
-    _lora_crclen := core.LORA_CRC_ENABLE
-    _lora_iqswap := core.LORA_IQ_STD
-    cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
+    LORA_SET_PACKETPARAMS.preamble_len :=   (core.LORA_PBLE_LEN_EXP_DEF << 4) | ...
+                                            core.LORA_PBLE_LEN_MANT_DEF
+    LORA_SET_PACKETPARAMS.payload_len :=    255
+    LORA_SET_PACKETPARAMS.header_type :=    core.EXPLICIT_HEADER
+    LORA_SET_PACKETPARAMS.crc_len :=        core.LORA_CRC_ENABLE
+    LORA_SET_PACKETPARAMS.invert_iq :=      core.LORA_IQ_STD
+    cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
 
-    _txpwr := -18 + 18                          ' -18dBm
-    _pa_ramp_time := core.RADIO_RAMP_20_US      ' 20uS
-    cmd(core.SET_TXPARAMS, @_pa_ramp_time, 2)
+    SET_TXPARAMS.power:=                    -18 + 18                    ' -18dBm
+    SET_TXPARAMS.ramp_time :=                core.RADIO_RAMP_20_US       ' 20uS
+    cmd(core.SET_TXPARAMS, @SET_TXPARAMS, 2)
 
 
 PUB preset_dr0()
@@ -303,10 +354,10 @@ PUB bt(b_t): curr_bt
 '   NOTE: Used when modulation() == GFSK
     case b_t
         0, 1_0, 0_5:
-            _mod_bwt := (lookdownz(b_t: 0, 1_0, 0_5) << 4)
-            cmd(core.SET_MODPARAMS, @_mod_bwt, 3)
+            GFSK_SET_MODPARAMS.bandwidth_time := (lookdownz(b_t: 0, 1_0, 0_5) << 4)
+            cmd(core.SET_MODPARAMS, @GFSK_SET_MODPARAMS.bandwidth_time, 3)
         other:
-            curr_bt := _mod_bwt >> 4
+            curr_bt := GFSK_SET_MODPARAMS.bandwidth_time >> 4
             return lookupz(curr_bt: 0, 1_0, 0_5)
 
 
@@ -322,7 +373,7 @@ PUB carrier_freq(freq)
 '   Any other value is ignored
     case freq
         2_400_000..2_500_000:
-            _freq := freq
+            radio_config.frequency := freq
             freq := u64.multdiv(freq, 1_000_000, F_RES) 
             cmd(core.SET_RFFREQ, @freq, 3)
         other:
@@ -345,10 +396,10 @@ PUB code_rate(rate=-2): curr_rate
     case rate
         $04_05..$04_08, $14_05, $14_06, $14_08:
             rate := lookdown(rate: $04_05, $04_06, $04_07, $04_08, $14_05, $14_06, $14_08)
-            _lora_cr := rate
-            cmd(core.SET_MODPARAMS, @_lora_cr, 3) ' set 3 params: SF, BW, CR
+            LORA_SET_MODPARAMS.code_rate := rate
+            cmd(core.SET_MODPARAMS, @LORA_SET_MODPARAMS, 3) ' set 3 params: SF, BW, CR
         other:
-            curr_rate := _lora_cr
+            curr_rate := LORA_SET_MODPARAMS.code_rate
             return lookup(rate: $04_05, $04_06, $04_07, $04_08, $14_05, $14_06, $14_08)
 
 
@@ -361,37 +412,42 @@ PUB crc_check_ena(state=-2): curr_state
         GFSK:
             case ||(state)
                 0:
-                    _crclen := core.RADIO_CRC_OFF
+                    GFSK_SET_PACKETPARAMS.crc_len:= core.RADIO_CRC_OFF
                 1:
                     ' is CRC length already set to something valid? (1 or 2 bytes)
                     ' if so, leave it as-is
                     ' if it's not enabled yet (0), enable it (set it to 1 byte)
-                    ifnot ( lookdown(_crclen: core.RADIO_CRC_1_BYTES, core.RADIO_CRC_2_BYTES) )
-                        _crclen := core.RADIO_CRC_1_BYTES
+                    ifnot ( lookdown(GFSK_SET_PACKETPARAMS.crc_len: core.RADIO_CRC_1_BYTES, core.RADIO_CRC_2_BYTES) )
+                        GFSK_SET_PACKETPARAMS.crc_len := core.RADIO_CRC_1_BYTES
                 other:
                     ' are CRC checks enabled? (1 or 2)
                     ' if so, return TRUE
-                    return ( lookdown(_crclen: core.RADIO_CRC_1_BYTES, core.RADIO_CRC_2_BYTES) > 0 )
-            cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
+                    return ( lookdown(GFSK_SET_PACKETPARAMS.crc_len: core.RADIO_CRC_1_BYTES, core.RADIO_CRC_2_BYTES) > 0 )
+            cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
         LORA:
             case ||(state)
                 0, 1:
-                    _lora_crclen := lookdown(||(state): $00, $20)
-                    cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
+                    LORA_SET_PACKETPARAMS.crc_len := lookdown(||(state): $00, $20)
+                    cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
                 other:
-                    return ( lookdown(_lora_crclen: $00, $20) == 1 )
+                    return ( lookdown(LORA_SET_PACKETPARAMS.crc_len: $00, $20) == 1 )
 
 
 PUB crc_len(length=-2): curr_len
 ' Set CRC encoding scheme length, in bytes
 '   Valid values: 0 (no CRC), 1, 2
 '   Any other value returns the current (cached) setting
-    case length
-        0, 1, 2:
-            _crclen := length << 4
-            cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
-        other:
-            return _crclen >> 4
+    case modulation()
+        GFSK:
+            case length
+                0, 1, 2:
+                    GFSK_SET_PACKETPARAMS.crc_len := length << 4
+                    cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
+                other:
+                    return GFSK_SET_PACKETPARAMS.crc_len >> 4
+        LORA:
+            ' LoRa modulation only has one setting: on or off, so just return 0 or 1
+            return ( (LORA_SET_PACKETPARAMS.crc_len <> 0) & 1)
 
 
 PUB data_rate(rate=-2)
@@ -402,57 +458,57 @@ PUB data_rate(rate=-2)
 '   NOTE: Bandwidth is set using rx_bw()
     case rate
         2_000_000:
-            _br_bw := GFSK_BLE_BR_2_000_BW_2_4
+            GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_2_000_BW_2_4
         1_600_000:
-            _br_bw := GFSK_BLE_BR_2_000_BW_2_4
+            GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_2_000_BW_2_4
         1_000_000:
-            case _bw
+            case radio_config.bandwidth
                 2_400_000:
-                    _br_bw := GFSK_BLE_BR_1_000_BW_2_4
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_1_000_BW_2_4
                 1_200_000:
-                    _br_bw := GFSK_BLE_BR_1_000_BW_1_2
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_1_000_BW_1_2
                 other:
                     return
         800_000:
-            case _bw
+            case radio_config.bandwidth
                 2_400_000:
-                    _br_bw := GFSK_BLE_BR_0_800_BW_2_4
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_800_BW_2_4
                 1_200_000:
-                    _br_bw := GFSK_BLE_BR_0_800_BW_1_2
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_800_BW_1_2
                 other:
                     return
         500_000:
-            case _bw
+            case radio_config.bandwidth
                 1_200_000:
-                    _br_bw := GFSK_BLE_BR_0_500_BW_1_2
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_500_BW_1_2
                 600_000:
-                    _br_bw := GFSK_BLE_BR_0_500_BW_0_6
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_500_BW_0_6
                 other:
                     return
         400_000:
-            case _bw
+            case radio_config.bandwidth
                 1_200_000:
-                    _br_bw := GFSK_BLE_BR_0_400_BW_1_2
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_400_BW_1_2
                 600_000:
-                    _br_bw := GFSK_BLE_BR_0_400_BW_0_6
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_400_BW_0_6
                 other:
                     return
         250_000:
-            case _bw
+            case radio_config.bandwidth
                 600_000:
-                    _br_bw := GFSK_BLE_BR_0_250_BW_0_6
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_250_BW_0_6
                 300_000:
-                    _br_bw := GFSK_BLE_BR_0_250_BW_0_3
+                    GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_250_BW_0_3
                 other:
                     return
         125_000:
-            _br_bw := GFSK_BLE_BR_0_125_BW_0_3
+            GFSK_SET_MODPARAMS.bitrate_bandwidth := GFSK_BLE_BR_0_125_BW_0_3
         other:
-            return _rate
+            return radio_config.data_rate
 
-    _rate := rate
+    radio_config.data_rate := rate
 
-    cmd(core.SET_MODPARAMS, @_mod_bwt, 3)
+    cmd(core.SET_MODPARAMS, @GFSK_SET_MODPARAMS, 3)
 
 
 PUB data_whiten_ena(state=-2): curr_state
@@ -461,11 +517,11 @@ PUB data_whiten_ena(state=-2): curr_state
 '   Any other value returns the current (cached) setting
     case ||(state)
         0, 1:
-            _data_whiten := lookupz(||(state): $08, $00)
-            cmd(core.SET_PKTPARAMS, @_preamble_len, 7)
+            GFSK_SET_PACKETPARAMS.data_whitening := lookupz(||(state): $08, $00)
+            cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
         other:
             ' negate lookdown result, so 1 becomes -1 (TRUE)
-            return -lookdown(_data_whiten: $08, $00)
+            return -lookdown(GFSK_SET_PACKETPARAMS.data_whitening: $08, $00)
 
 
 PUB fifo_rx_base_ptr(rxp=-2)
@@ -474,17 +530,17 @@ PUB fifo_rx_base_ptr(rxp=-2)
 '   Any other value returns the current (cached) setting
     case rxp
         0..255:
-            _rxfifoptr := rxp
-            cmd(core.SET_BUFF_BASEADDR, @_txfifoptr, 2)
+            SET_BUFF_BASEADDR.rx_base_addr := rxp
+            cmd(core.SET_BUFF_BASEADDR, @SET_BUFF_BASEADDR, 2)
         other:
-            return _rxfifoptr
+            return SET_BUFF_BASEADDR.rx_base_addr
 
 
 PUB fifo_rx_current_addr(): addr
 ' Start address (in FIFO) of last packet received
 '   Returns: Starting address of last packet received
     rx_buff_status()
-    return _lastrx_paylen
+    return GET_RXBUFFSTATUS.rx_start_buff_ptr
 
 
 PUB fifo_tx_base_ptr(txp=-2)
@@ -493,10 +549,10 @@ PUB fifo_tx_base_ptr(txp=-2)
 '   Any other value returns the current (cached) setting
     case txp
         0..255:
-            _txfifoptr := txp
-            cmd(core.SET_BUFF_BASEADDR, @_txfifoptr, 2)
+            SET_BUFF_BASEADDR.tx_base_addr := txp
+            cmd(core.SET_BUFF_BASEADDR, @SET_BUFF_BASEADDR, 2)
         other:
-            return _txfifoptr
+            return SET_BUFF_BASEADDR.tx_base_addr
 
 
 PUB freq_dev(freq=-2): curr_freq | modidx
@@ -540,10 +596,10 @@ PUB gpio1(mask=-2): curr_mask
 '   Any other value returns the current (cached) setting
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
-            _gpio1mask := mask
-            cmd(core.SET_DIOIRQPARAMS, @_gpio3mask, 8)
+            SET_DIOIRQPARAMS.dio3_mask := mask
+            cmd(core.SET_DIOIRQPARAMS, @SET_DIOIRQPARAMS, 8)
         other:
-            return _gpio1mask
+            return SET_DIOIRQPARAMS.dio1_mask
 
 
 PUB gpio2(mask=-2): curr_mask
@@ -570,10 +626,10 @@ PUB gpio2(mask=-2): curr_mask
 '   Any other value returns the current (cached) setting
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
-            _gpio2mask := mask
-            cmd(core.SET_DIOIRQPARAMS, @_gpio3mask, 8)
+            SET_DIOIRQPARAMS.dio2_mask := mask
+            cmd(core.SET_DIOIRQPARAMS, @SET_DIOIRQPARAMS, 8)
         other:
-            return _gpio2mask
+            return SET_DIOIRQPARAMS.dio2_mask
 
 
 PUB gpio3(mask=-2): curr_mask
@@ -600,10 +656,10 @@ PUB gpio3(mask=-2): curr_mask
 '   Any other value returns the current (cached) setting
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
-            _gpio3mask := mask
-            cmd(core.SET_DIOIRQPARAMS, @_gpio3mask, 8)
+            SET_DIOIRQPARAMS.dio3_mask := mask
+            cmd(core.SET_DIOIRQPARAMS, @SET_DIOIRQPARAMS.dio3_mask, 8)
         other:
-            return _gpio3mask
+            return SET_DIOIRQPARAMS.dio3_mask
 
 
 PUB idle() | tmp
@@ -633,11 +689,9 @@ PUB int_clear(mask=$ffff)
 '       2   Syncword valid                  GFSK, BLE, FLRC
 '       1   RX complete                     GFSK, BLE, FLRC, LORA
 '       0   TX complete                     GFSK, BLE, FLRC, LORA
-    case mask
-        %0000_0000_0000_0000..%1111_1111_1111_1111:
-            cmd(core.CLR_IRQSTATUS, @mask, 2)
-        other:
-            return
+'   Default: clear all bits
+    mask &= $ffff
+    cmd(core.CLR_IRQSTATUS, @mask, 2)
 
 
 PUB interrupt(): int_src
@@ -687,10 +741,10 @@ PUB int_mask(mask=-2): curr_mask
 '       0   TX complete                     GFSK, BLE, FLRC, LORA
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
-            _intmask := mask
-            cmd(core.SET_DIOIRQPARAMS, @_gpio3mask, 8)
+            SET_DIOIRQPARAMS.irq_mask := mask
+            cmd(core.SET_DIOIRQPARAMS, @SET_DIOIRQPARAMS, 8)
         other:
-            return _intmask
+            return SET_DIOIRQPARAMS.irq_mask
 
 
 PUB iq_inv(state=-2): curr_state
@@ -700,17 +754,17 @@ PUB iq_inv(state=-2): curr_state
 '   NOTE: Only valid when modulation() == LORA
     case ||(state)
         0, 1:
-            _lora_iqswap := lookdownz(||(state): core.LORA_IQ_STD, core.LORA_IQ_INVERTED)
-            cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
+            LORA_SET_PACKETPARAMS.invert_iq := lookdownz(||(state): core.LORA_IQ_STD, core.LORA_IQ_INVERTED)
+            cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
         other:
-            curr_state := _lora_iqswap
+            curr_state := LORA_SET_PACKETPARAMS.invert_iq
             return ( lookupz(curr_state: core.LORA_IQ_STD, core.LORA_IQ_INVERTED) == 1 )
 
 
 PUB last_pkt_len(): nr_bytes
 ' Return number of payload bytes of last packet received
     rx_buff_status()
-    return _lastrx_paylen
+    return GET_RXBUFFSTATUS.rx_payload_len
 
 
 PUB modulation(mode=-2)
@@ -725,11 +779,11 @@ PUB modulation(mode=-2)
 '   when this setting is changed, and some settings have a modulation-specific meaning
     case mode
         GFSK, LORA, RANGING, FLRC, BLE:
-            _modulation := mode
+            radio_config.modulation := mode
             idle()                              ' must be set in idle/standby
             cmd(core.SET_PKTTYPE, @mode, 1)
         other:
-            return _modulation
+            return radio_config.modulation
 
 
 PUB mod_idx(idx=-2): curr_idx
@@ -740,13 +794,13 @@ PUB mod_idx(idx=-2): curr_idx
 '   NOTE: For use when modulation() == GFSK
     case idx
         0_35..4_00:
-            _modidx := (idx/25)-1
-            cmd(core.SET_MODPARAMS, @_mod_bwt, 3)
+            SET_MODPARAMS.modulation_idx := (idx/25)-1
+            cmd(core.SET_MODPARAMS, @SET_MODPARAMS, 3)
         other:
-            if ( _modidx == 0 )
+            if ( SET_MODPARAMS.modulation_idx == 0 )
                 return 0_35
             else
-                return ( (_modidx + 1) * 25 )
+                return ( (SET_MODPARAMS.modulation_idx + 1) * 25 )
 
 
 PUB opmode(mode=-2): curr_mode
@@ -769,7 +823,9 @@ PUB opmode(mode=-2): curr_mode
         OPMODE_RX:
             rx_mode()
         other:
-            return _opmode
+            return radio_config.opmode
+
+    radio_config.opmode := mode
 
 
 PUB pkt_status(ptr_stat)
@@ -809,17 +865,17 @@ PUB payld_len(length=-2): curr_len
         GFSK:
             case length
                 0..255:
-                    _paylen := length
-                    cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
+                    GFSK_SET_PACKETPARAMS.payload_len := length
+                    cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
                 other:
-                    return _paylen
+                    return GFSK_SET_PACKETPARAMS.payload_len
         LORA:
             case length
                 0..255:
-                    _lora_paylen := length
-                    cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
+                    LORA_SET_PACKETPARAMS.payload_len := length
+                    cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
                 other:
-                    return _lora_paylen
+                    return LORA_SET_PACKETPARAMS.payload_len
 
 
 PUB payld_len_cfg(mode=-2): curr_mode
@@ -832,22 +888,22 @@ PUB payld_len_cfg(mode=-2): curr_mode
         GFSK:
             case mode
                 PKTLEN_FIXED, PKTLEN_VAR:
-                    _pktlencfg := mode
+                    GFSK_SET_PACKETPARAMS.packet_len_cfg := mode
                 other:
-                    return _pktlencfg
-            cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
+                    return GFSK_SET_PACKETPARAMS.packet_len_cfg
+            cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
         LORA:
             case mode
                 PKTLEN_FIXED:
                 PKTLEN_VAR:
                     mode := core.IMPLICIT_HEADER
                 other:
-                    if ( _lora_pktlencfg == core.IMPLICIT_HEADER )
+                    if ( LORA_SET_PACKETPARAMS.header_type == core.IMPLICIT_HEADER )
                         return PKTLEN_VAR
                     else
                         return PKTLEN_FIXED
-            _lora_pktlencfg := mode
-            cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
+            LORA_SET_PACKETPARAMS.header_type := mode
+            cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
 
 
 PUB payld_rdy(): flag
@@ -855,8 +911,8 @@ PUB payld_rdy(): flag
 '   Returns: TRUE (-1) or FALSE (0)
 '   NOTE: Applies when modulation() == BLE, GFSK, or FLRC
 '   When modulation() == LORA, set int_mask() to RXDONE and check interrupt() & RXDONE
-    pkt_status(@_pktstatus)
-    return ( (_pktstatus[2] & PSTAT_PAYLDRDY) <> 0 )
+    pkt_status(@GET_PKTSTATUS)
+    return ( (GET_PKTSTATUS.packet_sts[2] & PSTAT_PAYLDRDY) <> 0 )
 
 
 PUB payld_sent(): flag
@@ -864,8 +920,8 @@ PUB payld_sent(): flag
 '   Returns: TRUE (-1) or FALSE (0)
 '   NOTE: Applies when modulation() == BLE, GFSK, FLRC
 '   When modulation() == LORA, set int_mask() to TXDONE and check interrupt() & TXDONE
-    pkt_status(@_pktstatus)
-    return ( (_pktstatus[3] & PSTAT_PAYLDSENT) <> 0 )
+    pkt_status(@GET_PKTSTATUS)
+    return ( (GET_PKTSTATUS.packet_sts[3] & PSTAT_PAYLDSENT) <> 0 )
 
 
 PUB preamble_len(len=-2): curr_len | mant, exp, len_calc
@@ -876,10 +932,10 @@ PUB preamble_len(len=-2): curr_len | mant, exp, len_calc
         GFSK:
             case len
                 4, 8, 12, 16, 20, 24, 28, 32:
-                    _preamble_len := lookdownz(len: 4, 8, 12, 16, 20, 24, 28, 32) << 4
-                    cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
+                    GFSK_SET_PACKETPARAMS.preamble_len := lookdownz(len: 4, 8, 12, 16, 20, 24, 28, 32) << 4
+                    cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
                 other:
-                    curr_len := _preamble_len >> 4
+                    curr_len := GFSK_SET_PACKETPARAMS.preamble_len >> 4
                     return lookupz(curr_len: 4, 8, 12, 16, 20, 24, 28, 32)
         LORA:
             case len
@@ -895,11 +951,11 @@ PUB preamble_len(len=-2): curr_len | mant, exp, len_calc
                                 quit
                         if ( len_calc => len )
                             quit
-                    _lora_preamble := ( (exp << 4) | mant )
-                    cmd(core.SET_PKTPARAMS, @_lora_iqswap, 5)
+                    LORA_SET_PACKETPARAMS.preamble_len := ( (exp << 4) | mant )
+                    cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
                 other:
-                    exp := (_lora_preamble >> 4) & $f
-                    mant := _lora_preamble & $f
+                    exp := (LORA_SET_PACKETPARAMS.preamble_len >> 4) & $f
+                    mant := LORA_SET_PACKETPARAMS.preamble_len & $f
                     return mant * (1 << exp)
 
 
@@ -910,11 +966,11 @@ PUB pa_ramp_time(rtime=-2): curr_rtime
 '   Any other returns the current (cached) setting
     case rtime
         20, 16, 12, 10, 8, 6, 4, 2:
-            _pa_ramp_time := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
-            _pa_ramp_time <<= 5
-            cmd(core.SET_TXPARAMS, @_pa_ramp_time, 2)
+            SET_TXPARAMS.ramp_time := lookdownz(rtime: 2, 4, 6, 8, 10, 12, 16, 20)
+            SET_TXPARAMS.ramp_time <<= 5
+            cmd(core.SET_TXPARAMS, @SET_TXPARAMS, 2)
         other:
-            curr_rtime := _pa_ramp_time >> 5
+            curr_rtime := SET_TXPARAMS >> 5
             return lookupz(curr_rtime: 2, 4, 6, 8, 10, 12, 16, 20)
 
 
@@ -949,58 +1005,60 @@ PUB rx_bw(bw=-2): curr_bw
         GFSK:
             case bw
                 300_000:
-                    case _rate
+                    case radio_config.data_rate
                         125_000:
-                            _bw := core.GFSK_BLE_BR_0_125_BW_0_3
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_125_BW_0_3
                         250_000:
-                            _bw := core.GFSK_BLE_BR_0_250_BW_0_3
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_250_BW_0_3
                         other:
-                            _bw := core.GFSK_BLE_BR_0_125_BW_0_3
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_125_BW_0_3
                 600_000:
-                    case _rate
+                    case radio_config.data_rate
                         250_000:
-                            _bw := core.GFSK_BLE_BR_0_250_BW_0_6
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_250_BW_0_6
                         400_000:
-                            _bw := core.GFSK_BLE_BR_0_400_BW_0_6
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_400_BW_0_6
                         500_000:
-                            _bw := core.GFSK_BLE_BR_0_500_BW_0_6
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_500_BW_0_6
                         other:
-                            _bw := core.GFSK_BLE_BR_0_250_BW_0_6
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_250_BW_0_6
                 1_200_000:
-                    case _rate
+                    case radio_config.data_rate
                         400_000:
-                            _bw := core.GFSK_BLE_BR_0_400_BW_1_2
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_400_BW_1_2
                         500_000:
-                            _bw := core.GFSK_BLE_BR_0_500_BW_1_2
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_500_BW_1_2
                         800_000:
-                            _bw := core.GFSK_BLE_BR_0_800_BW_1_2
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_800_BW_1_2
                         1_000_000:
-                            _bw := core.GFSK_BLE_BR_1_000_BW_1_2
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_1_000_BW_1_2
                         other:
-                            _bw := core.GFSK_BLE_BR_0_400_BW_1_2
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_400_BW_1_2
                 2_400_000:
-                    case _rate
+                    case radio_config.data_rate
                         800_000:
-                            _bw := core.GFSK_BLE_BR_0_800_BW_2_4
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_800_BW_2_4
                         1_000_000:
-                            _bw := core.GFSK_BLE_BR_1_000_BW_2_4
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_1_000_BW_2_4
                         1_600_000:
-                            _bw := core.GFSK_BLE_BR_1_600_BW_2_4
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_1_600_BW_2_4
                         2_000_000:
-                            _bw := core.GFSK_BLE_BR_2_000_BW_2_4
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_2_000_BW_2_4
                         other:
-                            _bw := core.GFSK_BLE_BR_0_800_BW_2_4
+                            GFSK_SET_MODPARAMS.bitrate_bandwidth := core.GFSK_BLE_BR_0_800_BW_2_4
                 other:
-                    return _bw
-            cmd(core.SET_MODPARAMS, @_br_bw, 3)
+                    return radio_config.bandwidth
+            radio_config.bandwidth := bw
+            cmd(core.SET_MODPARAMS, @GFSK_SET_MODPARAMS, 3)
         LORA:
             case bw
                 203_125, 406_250, 812_500, 1_625_000:
                     bw := lookdown(bw: 203_125, 406_250, 812_500, 1_625_000)
-                    _lora_bw := lookup(bw: $34, $26, $18, $0A)
-                    cmd(core.SET_MODPARAMS, @_lora_cr, 3)
+                    LORA_SET_MODPARAMS.bandwidth := lookup(bw: $34, $26, $18, $0A)
+                    radio_config.bandwidth := bw
+                    cmd(core.SET_MODPARAMS, @LORA_SET_MODPARAMS, 3)
                 other:
-                    curr_bw := lookdown(_lora_bw: $34, $26, $18, $0A)
+                    curr_bw := lookdown(LORA_SET_MODPARAMS.bandwidth: $34, $26, $18, $0A)
                     return lookup(curr_bw: 203_125, 406_250, 812_500, 1_625_000)
 
 
@@ -1010,8 +1068,8 @@ PUB rx_buff_status(): stat
 '       LSB: length of last received packet
 '       MSB: FIFO address/offset of first received
     cmd(core.GET_RXBUFFSTATUS, 0, 0, @stat, 2)
-    _lastrx_paylen := stat.byte[0]
-    _rxbuff_stptr := stat.byte[1]
+    GET_RXBUFFSTATUS.rx_payload_len := stat.byte[0]
+    GET_RXBUFFSTATUS.rx_start_buff_ptr := stat.byte[1]
 
 
 PUB rx_mode() | tmp
@@ -1031,7 +1089,7 @@ PUB rx_payld(nr_bytes, ptr_buff)
             until not busy()
             outa[_CS] := 0
                 spi.wr_byte(core.RD_BUFF)
-                spi.wr_byte(0)                      ' offset within RX FIFO
+                spi.wr_byte(0)                  ' offset within RX FIFO
                 spi.wr_byte(core.NOOP)
                 spi.rdblock_lsbf(ptr_buff, nr_bytes)
             outa[_CS] := 1
@@ -1048,7 +1106,7 @@ PUB set_syncwd(ptr_syncwd)
 
 PUB sleep() | tmp
 ' Power down chip
-    tmp := 0                                    '[b1..0]: RAM flushed in sleep
+    tmp := 0                                    ' [b1..0]: RAM flushed in sleep
     cmd(core.SET_SLEEP, @tmp, 1)
 
 
@@ -1064,10 +1122,10 @@ PUB spread_fact(sf=-2): curr_sf | tmp
         9..12:
             tmp := core.SF9TO12
         other:
-            return _lora_sf >> 4
+            return LORA_SET_MODPARAMS.spread_factor >> 4
 
-    _lora_sf := sf << 4
-    cmd(core.SET_MODPARAMS, @_lora_cr, 3)       ' set 3 params: SF, BW, CR
+    LORA_SET_MODPARAMS.spread_factor := sf << 4
+    cmd(core.SET_MODPARAMS, @LORA_SET_MODPARAMS, 3)   ' set 3 params: SF, BW, CR
     writereg(core.SF, 1, @tmp)
     tmp := 1
     writereg(core.FREQERRCOMP, 1, @tmp)
@@ -1091,10 +1149,10 @@ PUB syncwd_len(length=-2): curr_len
 '   Any other value returns the current (cached) setting
     case length
         1..5:
-            _syncwd_len := lookup(length: $00, $02, $04, $06, $08)
-            cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
+            GFSK_SET_PACKETPARAMS.syncword_len := lookup(length: $00, $02, $04, $06, $08)
+            cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
         other:
-            return lookdown(_syncwd_len: 1..5)
+            return lookdown(GFSK_SET_PACKETPARAMS.syncword_len: 1..5)
 
 
 PUB syncwd_mode(mode=-2): curr_mode
@@ -1112,10 +1170,10 @@ PUB syncwd_mode(mode=-2): curr_mode
 '   Any other value returns the current (cached) setting
     case mode
         SWD_DISABLE, SWD1, SWD2, SWD1_2, SWD3, SWD1_3, SWD2_3, SWD1_2_3:
-            _syncwd_mode := mode
-            cmd(core.SET_PKTPARAMS, @_data_whiten, 7)
+            GFSK_SET_PACKETPARAMS.syncword_mode := mode
+            cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
         other:
-            return _syncwd_mode
+            return GFSK_SET_PACKETPARAMS.syncword_mode
 
 
 PUB test_cont_preamble()
@@ -1165,10 +1223,10 @@ PUB tx_pwr(pwr=-255): curr_pwr
 '   Any other value returns the current (cached) setting
     case pwr
         -18..13:
-            _txpwr := pwr + 18
-            cmd(core.SET_TXPARAMS, @_txpwr, 2)
+            SET_TXPARAMS.power := pwr + 18
+            cmd(core.SET_TXPARAMS, @SET_TXPARAMS, 2)
         other:
-            return _txpwr-18
+            return SET_TXPARAMS.power-18
 
 
 PRI cmd(cmd_val, ptr_params=0, nr_params=0, ptr_resp=0, sz_resp=0) | cmd_pkt, b
