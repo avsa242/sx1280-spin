@@ -199,8 +199,7 @@ PUB startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, RESET_PIN, BUSY__PIN): status
         _BUSY := BUSY__PIN
         reset()
         pinh(_CS)
-        dira[_CS] := 1
-        dira[_BUSY] := 0
+        pinf(_BUSY)
         return
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
@@ -210,8 +209,8 @@ PUB startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, RESET_PIN, BUSY__PIN): status
 
 PUB stop()
 ' Stop the driver
-    dira[_CS] := 0
-    dira[_RESET] := 0
+    pinf(_CS)
+    pinf(_RESET)
     spi.deinit()
 
 
@@ -219,7 +218,7 @@ PUB preset_gfsk_125k_0p3bw()
 ' GFSK modulation, 125kbps, 300kHz bandwidth
 ' Modulation Index: 1.0
 ' BT: 0.5
-' 5-byte syncwd length, match stored syncwd .1 only
+' 5-byte syncwd length, match stored syncwd #1 only
 ' Variable-length packet mode
     modulation(GFSK)
 
@@ -234,7 +233,7 @@ PUB preset_gfsk_125k_0p3bw()
     ' SET_PACKETPARAMS
     GFSK_SET_PACKETPARAMS.preamble_len :=   core.PREAMBLE_LEN_08_BITS   ' 8 bits
     GFSK_SET_PACKETPARAMS.syncword_len :=   core.SYNC_WORD_LEN_5_B      ' 5 bytes
-    GFSK_SET_PACKETPARAMS.syncword_mode :=  SWD1                        ' match syncword . 1
+    GFSK_SET_PACKETPARAMS.syncword_mode :=  SWD1                        ' match syncword # 1
     GFSK_SET_PACKETPARAMS.packet_len_cfg := PKTLEN_VAR                  ' variable length payloads
     GFSK_SET_PACKETPARAMS.payload_len :=    255                         ' max len=255
     GFSK_SET_PACKETPARAMS.crc_len :=        core.RADIO_CRC_2_BYTES      ' 2-byte CRC

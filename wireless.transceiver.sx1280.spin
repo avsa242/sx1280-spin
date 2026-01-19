@@ -410,7 +410,7 @@ PUB crc_check_ena(state=-2): curr_state
 '   Any other value returns the current (cached) setting
     case modulation()
         GFSK:
-            case ||(state)
+            case abs(state)
                 0:
                     GFSK_SET_PACKETPARAMS.crc_len:= core.RADIO_CRC_OFF
                 1:
@@ -425,9 +425,9 @@ PUB crc_check_ena(state=-2): curr_state
                     return ( lookdown(GFSK_SET_PACKETPARAMS.crc_len: core.RADIO_CRC_1_BYTES, core.RADIO_CRC_2_BYTES) > 0 )
             cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
         LORA:
-            case ||(state)
+            case abs(state)
                 0, 1:
-                    LORA_SET_PACKETPARAMS.crc_len := lookdown(||(state): $00, $20)
+                    LORA_SET_PACKETPARAMS.crc_len := lookdown(abs(state): $00, $20)
                     cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
                 other:
                     return ( lookdown(LORA_SET_PACKETPARAMS.crc_len: $00, $20) == 1 )
@@ -515,9 +515,9 @@ PUB data_whiten_ena(state=-2): curr_state
 ' Enable data whitening
 '   Valid values: *TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
-    case ||(state)
+    case abs(state)
         0, 1:
-            GFSK_SET_PACKETPARAMS.data_whitening := lookupz(||(state): $08, $00)
+            GFSK_SET_PACKETPARAMS.data_whitening := lookupz(abs(state): $08, $00)
             cmd(core.SET_PKTPARAMS, @GFSK_SET_PACKETPARAMS, 7)
         other:
             ' negate lookdown result, so 1 becomes -1 (TRUE)
@@ -752,9 +752,9 @@ PUB iq_inv(state=-2): curr_state
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value returns the current (cached) setting
 '   NOTE: Only valid when modulation() == LORA
-    case ||(state)
+    case abs(state)
         0, 1:
-            LORA_SET_PACKETPARAMS.invert_iq := lookdownz(||(state): core.LORA_IQ_STD, core.LORA_IQ_INVERTED)
+            LORA_SET_PACKETPARAMS.invert_iq := lookdownz(abs(state): core.LORA_IQ_STD, core.LORA_IQ_INVERTED)
             cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
         other:
             curr_state := LORA_SET_PACKETPARAMS.invert_iq
