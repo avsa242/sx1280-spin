@@ -272,8 +272,8 @@ PUB preset_lora()
     LORA_SET_PACKETPARAMS.invert_iq :=      core.LORA_IQ_STD
     cmd(core.SET_PKTPARAMS, @LORA_SET_PACKETPARAMS, 5)
 
-    SET_TXPARAMS.power:=                    -18 + 18                    ' -18dBm
-    SET_TXPARAMS.ramp_time :=                core.RADIO_RAMP_20_US       ' 20uS
+    SET_TXPARAMS.power :=                   -18 + 18                    ' -18dBm
+    SET_TXPARAMS.ramp_time :=               core.RADIO_RAMP_20_US       ' 20uS
     cmd(core.SET_TXPARAMS, @SET_TXPARAMS, 2)
 
 
@@ -352,7 +352,7 @@ PUB bt(b_t): curr_bt
     case b_t
         0, 1_0, 0_5:
             GFSK_SET_MODPARAMS.bandwidth_time := (lookdownz(b_t: 0, 1_0, 0_5) << 4)
-            cmd(core.SET_MODPARAMS, @GFSK_SET_MODPARAMS.bandwidth_time, 3)
+            cmd(core.SET_MODPARAMS, @GFSK_SET_MODPARAMS, 3)
         other:
             curr_bt := GFSK_SET_MODPARAMS.bandwidth_time >> 4
             return lookupz(curr_bt: 0, 1_0, 0_5)
@@ -654,7 +654,7 @@ PUB gpio3(mask=-2): curr_mask
     case mask
         %0000_0000_0000_0000..%1111_1111_1111_1111:
             SET_DIOIRQPARAMS.dio3_mask := mask
-            cmd(core.SET_DIOIRQPARAMS, @SET_DIOIRQPARAMS.dio3_mask, 8)
+            cmd(core.SET_DIOIRQPARAMS, @SET_DIOIRQPARAMS, 8)
         other:
             return SET_DIOIRQPARAMS.dio3_mask
 
