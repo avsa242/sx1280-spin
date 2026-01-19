@@ -4,7 +4,7 @@
     Description:    Driver for the SX1280 2.4GHz transceiver
     Author:         Jesse Burt
     Started:        Feb 14, 2020
-    Updated:        Jan 17, 2026
+    Updated:        Jan 19, 2026
     Copyright (c) 2026 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -1271,31 +1271,37 @@ PRI cmd(cmd_val, ptr_params=0, nr_params=0, ptr_resp=0, sz_resp=0) | cmd_pkt, b
             return
 
 
-PUB readreg(reg, nr_bytes, ptr_buff) | cmd_pkt[2], tmp
-' Read nr_bytes from register 'reg' to address 'ptr_buff'
-    case reg
+PUB readreg(reg_nr, len, p_dest) | cmd_pkt
+' Read register(s) value
+'   reg_nr: register number
+'   len:    length/number of bytes to read
+'   p_dest: pointer to destination
+    case reg_nr
         0..$FFFF:
             cmd_pkt.byte[0] := core.READREG
-            cmd_pkt.byte[1] := reg.byte[1]
-            cmd_pkt.byte[2] := reg.byte[0]
+            cmd_pkt.byte[1] := reg_nr.byte[1]
+            cmd_pkt.byte[2] := reg_nr.byte[0]
             cmd_pkt.byte[3] := core.NOOP
             repeat
             until not busy()
             outa[_CS] := 0
                 time.usleep(125)
                 spi.wrblock_lsbf(@cmd_pkt, 4)
-                spi.rdblock_lsbf(ptr_buff, nr_bytes)
+                spi.rdblock_lsbf(p_dest, len)
             outa[_CS] := 1
 
 
-PRI writereg(reg_nr, nr_bytes, ptr_buff) | i
-' Write nr_bytes to register 'reg' stored at ptr_buff
+PRI writereg(reg_nr, len, p_src)
+' Write value to register
+'   reg_nr: register number
+'   len:    length/number of bytes to write
+'   p_src:  pointer to source value(s)
     case reg_nr
         core.SYNCWD1, core.SF, core.FREQERRCOMP:
             outa[_CS] := 0
                 spi.wr_byte(core.WRITEREG)
                 spi.wrword_msbf(reg_nr)
-                spi.wrblock_lsbf(ptr_buff, nr_bytes)
+                spi.wrblock_lsbf(p_src, len)
             outa[_CS] := 1
         other:
             return
